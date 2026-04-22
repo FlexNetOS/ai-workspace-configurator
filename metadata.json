@@ -1,0 +1,6 @@
+{
+  "name": "DevOps Architect AI",
+  "description": "AI-powered workspace auto-configuration for DevOps. Generate Docker, CI/CD, and IaC files in seconds.",
+  "requestFramePermissions": [],
+  "majorCapabilities": []
+}

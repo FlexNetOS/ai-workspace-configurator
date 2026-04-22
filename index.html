@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Architect AI | Enterprise DevOps Configurator</title>
+    <script>
+      // Suppression of benign Vite HMR noise when HMR is disabled by platform
+      (function() {
+        const suppressStrings = [
+          'failed to connect to websocket',
+          '[vite] connecting...',
+          'WebSocket closed without opened'
+        ];
+        
+        const wrap = (obj, prop) => {
+          const original = obj[prop];
+          obj[prop] = (...args) => {
+            if (typeof args[0] === 'string' && suppressStrings.some(s => args[0].includes(s))) return;
+            return original.apply(obj, args);
+          };
+        };
+
+        wrap(console, 'error');
+        wrap(console, 'warn');
+        wrap(console, 'debug');
+        wrap(console, 'log');
+
+        window.addEventListener('unhandledrejection', (e) => {
+          if (e.reason && suppressStrings.some(s => String(e.reason).includes(s))) {
+            e.preventDefault();
+            e.stopImmediatePropagation();
+          }
+        }, true);
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
+
