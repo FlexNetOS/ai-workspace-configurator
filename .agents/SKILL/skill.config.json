@@ -1,0 +1,16 @@
+{
+  "name": "changelog-skill",
+  "version": "1.0.0",
+  "entrypoint": "SKILL.md",
+  "slashCommands": [
+    {
+      "name": "/changelog-sync",
+      "description": "Sync .changelog files from current implementation diff and create/update release audit note",
+      "doc": "slash-commands/changelog-sync.md"
+    }
+  ],
+  "hooks": {
+    "preflight": "hooks/preflight.ps1",
+    "postupdate": "hooks/postupdate.ps1"
+  }
+}

@@ -1,73 +1,64 @@
-# React + TypeScript + Vite
+# AI Workspace Configurator
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Desktop setup assistant for Windows-first AI development environments.
 
-Currently, two official plugins are available:
+## Stack
+- Frontend: React + TypeScript + Vite
+- Desktop packaging: Electron + electron-builder
+- CI release: GitHub Actions (`.github/workflows/release.yml`)
+- Shell standard: PowerShell 7+
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
-
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+## Local Development
+```powershell
+npm ci
+npm run dev
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
-
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+Build web app only:
+```powershell
+npm run build
 ```
+
+## Release Build Flow (Current)
+Release packaging is now root-managed (no `npm install` inside `release/`).
+
+GitHub release workflow:
+- Builds web assets with `npm ci` + `npm run build`
+- Installs packaging tools in CI using upgrade-only command:
+  - `npm install --no-save electron@latest electron-builder@latest --ignore-scripts`
+- Builds installers using:
+  - `npx electron-builder --projectDir release --config release/electron-builder.yml --publish=never --win nsis --win portable --win zip`
+
+Expected release artifacts:
+- `dist-electron/*.exe`
+- `dist-electron/*.zip`
+
+## Verified Upgrade Checklist (2026-04-23)
+- [x] `release/package-lock.json` removed from release flow to eliminate `EINTEGRITY` placeholder risk.
+- [x] `release/package.json` reduced to metadata-only.
+- [x] `release/electron-builder.yml` exists and is the single builder config.
+- [x] Workflow builds from root and uses `--projectDir release`.
+- [x] Workflow includes lockfile guard for `sha1-PLASH`.
+- [x] Workflow enforces PowerShell (`pwsh`) on runners.
+- [x] Changelog system added under `.changelog`.
+- [x] AI changelog skill package added under `.agents/SKILL`.
+
+## Changelog + Audit Workflow
+Primary docs:
+- `.changelog/CHANGELOG.MD`
+- `.changelog/file-changelog-table.csv`
+- `.changelog/reports-notes/`
+
+AI navigation + automation:
+- `.agents/README.md`
+- `.agents/SKILL/SKILL.md`
+- `.agents/SKILL/slash-commands/changelog-sync.md`
+- `.agents/SKILL/hooks/preflight.ps1`
+- `.agents/SKILL/hooks/postupdate.ps1`
+
+## Repository Pointers
+- App shell: `release/electron/main.js`
+- Frontend entry: `src/main.tsx`
+- Main UI: `src/App.tsx`
+- Release workflow: `.github/workflows/release.yml`
+- Release builder config: `release/electron-builder.yml`

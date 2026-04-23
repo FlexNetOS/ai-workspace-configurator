@@ -1,0 +1,49 @@
+# Electron Builder Configuration
+# Used by: npx electron-builder --projectDir release --config release/electron-builder.yml
+appId: com.aiworkspace.configurator
+productName: AI Workspace Configurator
+directories:
+  output: ../dist-electron
+files:
+  - from: electron
+    to: electron
+    filter:
+      - "**/*"
+  - from: ../dist
+    to: dist
+    filter:
+      - "**/*"
+  - from: ../public/scripts
+    to: scripts
+    filter:
+      - "*.ps1"
+  - from: ../public/configs
+    to: configs
+    filter:
+      - "**/*"
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+    - target: portable
+      arch:
+        - x64
+    - target: zip
+      arch:
+        - x64
+  publisherName: AI Workspace Team
+nsis:
+  oneClick: true
+  perMachine: true
+  allowToChangeInstallationDirectory: false
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: AI Workspace Configurator
+  artifactName: AI-Workspace-Configurator-Setup-${version}.exe
+portable:
+  artifactName: AI-Workspace-Configurator-Portable-${version}.exe
+publish:
+  provider: github
+  owner: FlexNetOS
+  repo: ai-workspace-configurator

@@ -1,0 +1,38 @@
+# Changelog
+
+All notable changes to this repository should be documented in this file.
+Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versioning follows SemVer.
+
+## [Unreleased]
+
+### Added
+- Added external Electron builder config at `release/electron-builder.yml`.
+- Added `.changelog` documentation and audit structure:
+  - `.changelog/README.md`
+  - `.changelog/file-changelog-table.csv`
+  - `.changelog/reports-notes/README.md`
+  - `.changelog/reports-notes/2026-04-23-release-audit.md`
+- Added AI-maintained changelog skill package at `.agents/SKILL` with:
+  - skill entrypoint
+  - slash command documentation
+  - preflight and post-update hook scripts
+  - skill config manifest
+
+### Changed
+- Refactored GitHub release workflow to run from repository root with `pwsh` shell defaults.
+- Added lockfile guard step to fail CI when placeholder integrity values (`sha1-PLASH`) are detected.
+- Updated release packaging command to use `--projectDir release` and central `release/electron-builder.yml`.
+- Hardened installer targets to build `nsis`, `portable`, and `zip` in a single consistent flow.
+- Simplified `release/package.json` to metadata-only with explicit private flag.
+
+### Fixed
+- Fixed GitHub release build failure caused by fake integrity hashes in `release/package-lock.json` (`EINTEGRITY`).
+- Fixed packaging path assumptions by bundling scripts/configs into locations expected by `release/electron/main.js`.
+
+### Removed
+- Removed dependency on `release/package-lock.json` and release-local `npm install` flow.
+
+## [3.6.0] - 2026-04-23
+
+### Notes
+- Baseline release branch now uses a root-managed Electron toolchain and centralized release config.

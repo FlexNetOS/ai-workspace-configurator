@@ -16,6 +16,9 @@ jobs:
     runs-on: windows-latest
     permissions:
       contents: write
+    defaults:
+      run:
+        shell: pwsh
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -26,6 +29,15 @@ jobs:
           node-version: '20'
           cache: 'npm'
 
+      - name: Validate lockfiles for fake integrity placeholders
+        run: |
+          $matches = Get-ChildItem -Path . -Recurse -File -Filter package-lock.json |
+            Select-String -SimpleMatch -Pattern 'sha1-PLASH'
+          if ($matches) {
+            $matches | ForEach-Object { Write-Error "Invalid lockfile integrity placeholder: $($_.Path):$($_.LineNumber)" }
+            throw "Found sha1-PLASH placeholders in lockfiles."
+          }
+
       # ─── Build web app ───
       - name: Install web app dependencies
         run: npm ci
@@ -34,16 +46,12 @@ jobs:
         run: npm run build
 
       # ─── Build Electron app ───
-      # Note: release/package-lock.json is a stub. We use npm install --ignore-scripts
-      # to avoid running electron-builder install-app-deps (which needs electron-builder
-      # to be already installed, a chicken-and-egg problem).
-      - name: Install Electron dependencies
-        working-directory: ./release
-        run: npm install --ignore-scripts
+      # Upgrade-only install, isolated to CI node_modules (no repo file changes).
+      - name: Install Electron build tools
+        run: npm install --no-save electron@latest electron-builder@latest --ignore-scripts
 
       - name: Build Electron app
-        working-directory: ./release
-        run: npx electron-builder --win --publish=never
+        run: npx electron-builder --projectDir release --config release/electron-builder.yml --publish=never --win nsis --win portable --win zip
 
       # ─── Upload to GitHub Release ───
       - name: Upload artifacts to release

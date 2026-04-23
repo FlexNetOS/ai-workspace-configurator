@@ -1,0 +1,9 @@
+file_path,change_type,status,summary,reason,last_updated
+.github/workflows/release.yml,updated,active,"Use pwsh, enforce lockfile integrity guard, run build with release projectDir","Stabilize release CI and prevent EINTEGRITY regressions",2026-04-23
+release/electron-builder.yml,updated,active,"Centralized release packaging config with deterministic file mappings","Align build artifacts with runtime expectations",2026-04-23
+release/package-lock.json,removed,complete,"Removed from release flow and repository changeset","Eliminate fake integrity placeholders and release-local dependency churn",2026-04-23
+release/package.json,updated,active,"Reduced to metadata-only release app manifest","Keep builder metadata clean and avoid duplicated build configuration",2026-04-23
+.changelog/CHANGELOG.MD,updated,active,"Standardized changelog using Keep a Changelog structure","Improve clarity, traceability, and AI-friendly updates",2026-04-23
+.changelog/reports-notes/,updated,active,"Added audit report and folder guidance","Establish evidence trail for release and CI fixes",2026-04-23
+.agents/README.md,added,active,"Added fast AI navigation entrypoint","Reduce time-to-context for automated maintenance",2026-04-23
+.agents/SKILL/,added,active,"Added changelog maintenance skill with hooks and slash command","Enable repeatable AI-driven changelog workflows",2026-04-23
