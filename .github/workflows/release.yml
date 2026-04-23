@@ -29,13 +29,24 @@ jobs:
           node-version: '20'
           cache: 'npm'
 
-      - name: Validate lockfiles for fake integrity placeholders
+      - name: Validate release lockfile policy and integrity placeholders
         run: |
+          $failed = $false
+
+          if (Test-Path "release/package-lock.json") {
+            Write-Error "Forbidden lockfile found: release/package-lock.json. Release packaging must remain root-managed."
+            $failed = $true
+          }
+
           $matches = Get-ChildItem -Path . -Recurse -File -Filter package-lock.json |
             Select-String -SimpleMatch -Pattern 'sha1-PLASH'
           if ($matches) {
-            $matches | ForEach-Object { Write-Error "Invalid lockfile integrity placeholder: $($_.Path):$($_.LineNumber)" }
-            throw "Found sha1-PLASH placeholders in lockfiles."
+            $matches | ForEach-Object { Write-Error "Invalid lockfile integrity placeholder (sha1-PLASH): $($_.Path):$($_.LineNumber)" }
+            $failed = $true
+          }
+
+          if ($failed) {
+            throw "Release lockfile validation failed: remove forbidden release/package-lock.json and any sha1-PLASH placeholder integrity values."
           }
 
       # ─── Build web app ───
