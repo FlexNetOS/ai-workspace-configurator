@@ -1,0 +1,4 @@
+{
+    "git.detectWorktrees": true,
+    "github.copilot.chat.agent.autoFix": true
+}
