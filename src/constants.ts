@@ -1,11 +1,11 @@
-import { Shield, Code2, Brain } from 'lucide-react';
+import { Shield, Code2, Brain, type LucideIcon } from 'lucide-react';
 
 export interface Blueprint {
   id: string;
   title: string;
   description: string;
   prompt: string;
-  icon: any;
+  icon: LucideIcon;
   tags: string[];
 }
 

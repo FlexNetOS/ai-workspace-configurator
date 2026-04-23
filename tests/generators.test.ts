@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import * as Generators from '../src/lib/generators';
+import type { GenerationResult } from '../src/services/geminiService';
 
 const mockResult = {
   dependencies: {
@@ -30,13 +31,13 @@ const mockResult = {
 
 describe('Generators Logic', () => {
   it('should generate a valid Dockerfile', () => {
-    const dockerfile = Generators.generateDockerfile(mockResult as any, false, true, true);
+    const dockerfile = Generators.generateDockerfile(mockResult as GenerationResult, false, true, true);
     expect(dockerfile).toContain('FROM ubuntu:22.04');
     expect(dockerfile).toContain('USER $USERNAME');
   });
 
   it('should generate a README with correct project title', () => {
-    const readme = Generators.generateReadme(mockResult as any, false, true, false, true);
+    const readme = Generators.generateReadme(mockResult as GenerationResult, false, true, false, true);
     expect(readme).toContain('# Test Project');
   });
 

@@ -417,13 +417,11 @@ async function startServer() {
   }
 
   app.listen(PORT, '0.0.0.0', () => {
-    // eslint-disable-next-line no-console
     console.log(`[auth-server] running at http://localhost:${PORT}`);
   });
 }
 
 startServer().catch((error) => {
-  // eslint-disable-next-line no-console
   console.error('[auth-server] failed to start', error);
   process.exit(1);
 });

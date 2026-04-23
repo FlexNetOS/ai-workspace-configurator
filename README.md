@@ -3,13 +3,37 @@
 Desktop setup assistant for Windows-first AI development environments.
 
 ## APP Purpose & Desired Output
-- 
+**Target User: Non-technical e.g., Grade School students & Grandparents can use this APP**
+- This project is a “AI Workspace Configurator” app designed to be the first-run bootstrap after installing/booting a clean OS (and also usable on an already-running OS). 
+- Focuses on kicking off an end-to-end, automated setup by dynamically detecting the machine’s hardware and environment and converting that into a reliable, structured “system profile” that drives the rest of the configuration workflow.
+- Detects hardware + system context (CPU/GPU, RAM, disk, OS/distro, drivers, network state, attached devices, virtualization/container hints, etc.).
+- Normalizes findings into a single machine profile (a consistent data payload the rest of the pipeline can trust).
+- Establishes prerequisites for the full setup by determining what’s possible/recommended on this specific machine (e.g., local LLM viability, GPU acceleration options, storage requirements, preferred install paths).
+- With hardware detection, the configurator can automatically choose the right installation plan and defaults for each machine—making the overall experience hands-off and repeatable, especially on a fresh OS where nothing is preconfigured.
+- Produces an authoritative, machine-specific “starting point” that enables the configurator to perform end-to-end AI workspace setup and configuration with minimal user input, whether immediately post-boot on a clean system or as a retrofit on an existing install.
 
 ## Stack
 - Frontend: React + TypeScript + Vite
 - Desktop packaging: Electron + electron-builder
 - CI release: GitHub Actions (`.github/workflows/release.yml`)
-- Shell standard: PowerShell 7+
+- Shell standard: (Windows)PowerShell 7+, (WSL2,Linux)ZSH
+
+## App Flow & User Experience Overview
+1. Install configurator + initialize logs/artifacts
+2. User selects provider + policy → generate plan preview
+3. Create rollback checkpoint (restore point + snapshots)
+4. Verify permissions/security/install readiness (admin, UAC, virtualization, reboot pending)
+5. Install latest PowerShell via MSI + verify
+6. 6Run Windows Update loop + upgrade all apps (winget) until fully current
+7. Auto-discover hardware/drivers/network → inventory artifacts
+8. Identify each device; user-assisted vendor login/registration + serial/warranty + resource tagging
+9. Link accounts (Docker, GitHub, HF, OpenRouter, Notion, Google, Cloudflare, …) + validate
+10. User approves final plan
+11. Apply configs + run idempotent install scripts (resume-safe)
+12. Install stack: Docker → WSL2 → IDE/terminal → distro/home scaffolding → llama.cpp → models → CLIs
+13. Run E2E tests
+14. Provision sandbox/dev/sim environment
+15. Hardware tests + tuning + optional BIOS adjustments
 
 ## Local Development
 

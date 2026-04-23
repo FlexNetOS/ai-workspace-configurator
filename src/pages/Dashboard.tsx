@@ -215,7 +215,24 @@ function MiniSparkline({ data, color = "#2563EB", height = 32 }: { data: number[
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const [state, setState] = useState<WizardState>(loadWizardState);
+  const [state, setState] = useState<WizardState>(() => {
+    const loaded = loadWizardState();
+    if (loaded.completedSteps.length === 0) {
+      const demo: WizardState = {
+        currentStep: 13,
+        completedSteps: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+        linkedAccounts: ["github", "docker", "huggingface", "google", "notion"],
+        checkpoints: [
+          { step: 3, timestamp: new Date(Date.now() - 86400000 * 2).toISOString() },
+          { step: 7, timestamp: new Date(Date.now() - 86400000).toISOString() },
+          { step: 10, timestamp: new Date(Date.now() - 3600000 * 5).toISOString() },
+        ],
+      };
+      saveWizardState(demo);
+      return demo;
+    }
+    return loaded;
+  });
   const [e2eRunning, setE2eRunning] = useState(false);
   const [e2eProgress, setE2eProgress] = useState(0);
   const [showAllActivity, setShowAllActivity] = useState(false);
@@ -257,24 +274,6 @@ export default function Dashboard() {
     setState(next);
     saveWizardState(next);
   }, [state, completedCount]);
-
-  /* Auto-save demo state if empty */
-  useEffect(() => {
-    if (completedCount === 0) {
-      const demo: WizardState = {
-        currentStep: 13,
-        completedSteps: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
-        linkedAccounts: ["github", "docker", "huggingface", "google", "notion"],
-        checkpoints: [
-          { step: 3, timestamp: new Date(Date.now() - 86400000 * 2).toISOString() },
-          { step: 7, timestamp: new Date(Date.now() - 86400000).toISOString() },
-          { step: 10, timestamp: new Date(Date.now() - 3600000 * 5).toISOString() },
-        ],
-      };
-      setState(demo);
-      saveWizardState(demo);
-    }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   /* Empty state */
   if (!hasStarted && completedCount === 0) {

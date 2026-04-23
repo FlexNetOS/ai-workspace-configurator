@@ -28,7 +28,7 @@ vi.mock('@google/genai', () => {
   });
 
   return {
-    GoogleGenAI: vi.fn().mockImplementation(function (this: any) {
+    GoogleGenAI: vi.fn().mockImplementation(function (this: Record<string, unknown>) {
       this.models = {
         generateContent: mockGenerateContent
       };

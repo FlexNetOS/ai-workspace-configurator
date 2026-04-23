@@ -48,7 +48,7 @@ function runBrowserChecks(): Partial<Record<string, string>> {
       out.os = 'Non-Windows OS detected';
     }
     out.cpuCores = navigator.hardwareConcurrency?.toString() || 'Unknown';
-    out.memory = (navigator as any).deviceMemory?.toString() || 'Unknown';
+    out.memory = (navigator as Navigator & { deviceMemory?: number }).deviceMemory?.toString() || 'Unknown';
   } catch {
     /* ignore */
   }

@@ -79,7 +79,7 @@ export const generateDevContainer = (result: GenerationResult | null, useDockerC
   const defaultPorts = enableGoogleAuth ? [8888, 8080] : [8888];
   const ports = Array.from(new Set([...defaultPorts, ...(deps.forward_ports || [])]));
   
-  let mounts = [];
+  const mounts = [];
   if (!useDockerCompose) {
     mounts.push(`"source=\${localWorkspaceFolder},target=/workspace,type=bind,consistency=cached"`);
     if (useSecrets) mounts.push(`"source=\${localWorkspaceFolder}/.env,target=/workspace/.env,type=bind"`);
