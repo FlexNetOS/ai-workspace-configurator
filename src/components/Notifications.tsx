@@ -1,10 +1,10 @@
 import React from 'react';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Check, AlertCircle, Info, X } from 'lucide-react';
 
-export type NotificationType = 'success' | 'error' | 'info';
+export type NotificationType = 'success' | 'error' | 'info' | 'warning';
 
-interface Notification {
+export interface Notification {
   id: string;
   message: string;
   type: NotificationType;
@@ -28,16 +28,18 @@ export const Notifications: React.FC<NotificationProps> = ({ notifications, remo
             className={`pointer-events-auto p-4 rounded-lg shadow-2xl border flex gap-3 items-start backdrop-blur-md ${
               n.type === 'success' ? 'bg-emerald-950/90 border-emerald-500/50 text-emerald-100' :
               n.type === 'error' ? 'bg-red-950/90 border-red-500/50 text-red-100' :
+              n.type === 'warning' ? 'bg-amber-950/90 border-amber-500/50 text-amber-100' :
               'bg-blue-950/90 border-blue-500/50 text-blue-100'
             }`}
           >
             <div className="mt-0.5">
               {n.type === 'success' && <Check className="w-4 h-4 text-emerald-400" />}
               {n.type === 'error' && <AlertCircle className="w-4 h-4 text-red-400" />}
+              {n.type === 'warning' && <AlertCircle className="w-4 h-4 text-amber-400" />}
               {n.type === 'info' && <Info className="w-4 h-4 text-blue-400" />}
             </div>
             <div className="flex-1">
-              <p className="text-xs font-mono font-bold leading-tight uppercase tracking-wider">{n.type === 'success' ? 'SYSTEM_CONFIRM' : n.type === 'error' ? 'CRITICAL_FAULT' : 'ARCHITECT_INFO'}</p>
+              <p className="text-xs font-mono font-bold leading-tight uppercase tracking-wider">{n.type === 'success' ? 'SYSTEM_CONFIRM' : n.type === 'error' ? 'CRITICAL_FAULT' : n.type === 'warning' ? 'AUTH_WARNING' : 'ARCHITECT_INFO'}</p>
               <p className="text-[11px] mt-1 opacity-80 leading-relaxed font-medium">{n.message}</p>
             </div>
             <button 

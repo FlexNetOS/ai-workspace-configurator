@@ -66,7 +66,7 @@ const FAQ_DATA: FaqItem[] = [
   },
   {
     question: "What accounts do I need?",
-    answer: "At minimum GitHub and Docker Hub accounts are recommended. GitHub is used for code repositories and Git configuration. Docker Hub is needed for pulling container images. HuggingFace is optional but recommended for downloading AI models. Google, Notion, OpenRouter, and Cloudflare are all optional.",
+    answer: "You can continue setup without blocking on real OAuth. The wizard creates synthetic continuity links first, then you can upgrade to real account linking when ready. GitHub and Docker Hub are still the most useful real accounts for day-to-day development.",
     category: "accounts",
   },
   {
@@ -90,8 +90,8 @@ const FAQ_DATA: FaqItem[] = [
     category: "technical",
   },
   {
-    question: "Where are my API keys stored?",
-    answer: "All API keys are stored locally in your browser's localStorage in an encrypted format. They are never transmitted to any external server. The keys are only used to authenticate with the respective services (e.g., your GitHub token only goes to GitHub's servers).",
+    question: "What are synthetic status tokens?",
+    answer: "Synthetic status tokens are non-secret continuity identifiers used to keep setup progress moving when OAuth is slow or unavailable. They are masked in the UI and do not grant API access. If you later complete OAuth, the account state upgrades to real-linked.",
     category: "accounts",
   },
   {

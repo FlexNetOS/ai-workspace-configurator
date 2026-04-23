@@ -1,24 +1,4 @@
-import { 
-  Terminal, 
-  Settings, 
-  FileCode, 
-  Download, 
-  Cpu, 
-  Globe, 
-  Shield, 
-  Activity, 
-  Box, 
-  Layers, 
-  Database,
-  Code2,
-  TerminalSquare,
-  Lock,
-  Boxes,
-  Zap,
-  Server,
-  Monitor,
-  Brain
-} from 'lucide-react';
+import { Shield, Code2, Brain } from 'lucide-react';
 
 export interface Blueprint {
   id: string;

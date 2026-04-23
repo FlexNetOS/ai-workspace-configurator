@@ -2,7 +2,13 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 
 export type CheckStatus = 'pending' | 'checking' | 'passed' | 'warning' | 'failed';
-export type AccountStatus = 'disconnected' | 'connecting' | 'connected' | 'failed';
+export type AccountStatus =
+  | 'disconnected'
+  | 'synthetic_pending'
+  | 'synthetic_linked'
+  | 'real_linked'
+  | 'failed';
+export type AccountLinkKind = 'synthetic' | 'real';
 
 export interface Provider {
   id: string;
@@ -19,8 +25,18 @@ export interface Account {
   description: string;
   icon: string;
   status: AccountStatus;
-  token?: string;
+  authRef?: string;
+  authKind?: AccountLinkKind;
+  lastLinkedAt?: string;
+  lastError?: string;
 }
+
+export type AccountStatusUpdate = Partial<
+  Pick<Account, 'authRef' | 'authKind' | 'lastLinkedAt' | 'lastError'>
+>;
+
+export const isLinkedAccountStatus = (status: AccountStatus): boolean =>
+  status === 'synthetic_linked' || status === 'real_linked';
 
 export interface WizardState {
   currentStep: number;
@@ -49,7 +65,7 @@ export interface WizardState {
   clearTerminalLogs: () => void;
   toggleProvider: (id: string) => void;
   setPolicy: (key: string, value: boolean) => void;
-  setAccountStatus: (id: string, status: AccountStatus, token?: string) => void;
+  setAccountStatus: (id: string, status: AccountStatus, meta?: AccountStatusUpdate) => void;
   setSecurityCheck: (key: string, status: CheckStatus) => void;
   setHardwareDiscovered: (discovered: boolean) => void;
   setE2eTest: (key: string, status: CheckStatus) => void;
@@ -61,6 +77,8 @@ export interface WizardState {
   setShowTerminal: (show: boolean) => void;
   reset: () => void;
 }
+
+const STORAGE_VERSION = 2;
 
 const initialProviders: Provider[] = [
   { id: 'docker', name: 'Docker', description: 'Container management platform', icon: 'Container', selected: false, required: true },
@@ -91,6 +109,91 @@ const initialPolicies: Record<string, boolean> = {
   wsl2Isolation: true,
   autoUpdate: true,
   telemetry: false,
+};
+
+const createSyntheticStatusRef = (id: string): string =>
+  `syn_${id}_${Math.random().toString(36).slice(2, 10)}`;
+
+const mapLegacyAccountStatus = (status: unknown): AccountStatus => {
+  if (status === 'connected') return 'synthetic_linked';
+  if (status === 'connecting') return 'synthetic_pending';
+  if (status === 'failed') return 'failed';
+  if (status === 'real_linked') return 'real_linked';
+  if (status === 'synthetic_linked') return 'synthetic_linked';
+  if (status === 'synthetic_pending') return 'synthetic_pending';
+  return 'disconnected';
+};
+
+const normalizeAccount = (accountLike: unknown): Account | null => {
+  if (typeof accountLike === 'string') {
+    const base = initialAccounts.find((a) => a.id === accountLike);
+    if (!base) return null;
+    return {
+      ...base,
+      status: 'synthetic_linked',
+      authKind: 'synthetic',
+      authRef: createSyntheticStatusRef(base.id),
+      lastLinkedAt: new Date().toISOString(),
+    };
+  }
+
+  if (!accountLike || typeof accountLike !== 'object') {
+    return null;
+  }
+
+  const legacy = accountLike as Record<string, unknown>;
+  if (typeof legacy.id !== 'string') return null;
+
+  const base = initialAccounts.find((a) => a.id === legacy.id) ?? {
+    id: legacy.id,
+    name: typeof legacy.name === 'string' ? legacy.name : legacy.id,
+    description: typeof legacy.description === 'string' ? legacy.description : '',
+    icon: typeof legacy.icon === 'string' ? legacy.icon : 'Globe',
+    status: 'disconnected' as const,
+  };
+
+  const status = mapLegacyAccountStatus(legacy.status);
+  const maybeAuthRef =
+    typeof legacy.authRef === 'string'
+      ? legacy.authRef
+      : typeof legacy.token === 'string'
+        ? legacy.token
+        : undefined;
+
+  const authKind: AccountLinkKind | undefined =
+    status === 'real_linked'
+      ? 'real'
+      : status === 'synthetic_linked' || status === 'synthetic_pending'
+        ? 'synthetic'
+        : undefined;
+
+  return {
+    ...base,
+    name: typeof legacy.name === 'string' ? legacy.name : base.name,
+    description: typeof legacy.description === 'string' ? legacy.description : base.description,
+    icon: typeof legacy.icon === 'string' ? legacy.icon : base.icon,
+    status,
+    authKind,
+    authRef:
+      status === 'synthetic_linked' || status === 'synthetic_pending'
+        ? maybeAuthRef ?? createSyntheticStatusRef(base.id)
+        : maybeAuthRef,
+    lastLinkedAt: typeof legacy.lastLinkedAt === 'string' ? legacy.lastLinkedAt : undefined,
+    lastError: typeof legacy.lastError === 'string' ? legacy.lastError : undefined,
+  };
+};
+
+const normalizePersistedLinkedAccounts = (raw: unknown): Account[] => {
+  if (!Array.isArray(raw)) {
+    return initialAccounts.map((a) => ({ ...a }));
+  }
+
+  const normalized = raw
+    .map((entry) => normalizeAccount(entry))
+    .filter((entry): entry is Account => entry !== null);
+
+  const byId = new Map(normalized.map((a) => [a.id, a]));
+  return initialAccounts.map((a) => byId.get(a.id) ?? { ...a });
 };
 
 const makeInitialState = () => ({
@@ -147,11 +250,31 @@ const useWizardStore = create<WizardState>()(
         set((state) => ({
           policies: { ...state.policies, [key]: value },
         })),
-      setAccountStatus: (id, status, token) =>
+      setAccountStatus: (id, status, meta) =>
         set((state) => ({
-          linkedAccounts: state.linkedAccounts.map((a) =>
-            a.id === id ? { ...a, status, token: token || a.token } : a
-          ),
+          linkedAccounts: state.linkedAccounts.map((a) => {
+            if (a.id !== id) return a;
+
+            if (status === 'disconnected') {
+              return {
+                ...a,
+                status,
+                authKind: undefined,
+                authRef: undefined,
+                lastLinkedAt: undefined,
+                lastError: undefined,
+              };
+            }
+
+            return {
+              ...a,
+              status,
+              authKind: meta?.authKind ?? a.authKind,
+              authRef: meta?.authRef ?? a.authRef,
+              lastLinkedAt: meta?.lastLinkedAt ?? a.lastLinkedAt,
+              lastError: meta?.lastError ?? a.lastError,
+            };
+          }),
         })),
       setSecurityCheck: (key, status) =>
         set((state) => ({
@@ -180,7 +303,15 @@ const useWizardStore = create<WizardState>()(
     }),
     {
       name: 'workspace_wizard_state',
+      version: STORAGE_VERSION,
       storage: createJSONStorage(() => localStorage),
+      migrate: (persistedState) => {
+        const state = (persistedState ?? {}) as Record<string, unknown>;
+        return {
+          ...state,
+          linkedAccounts: normalizePersistedLinkedAccounts(state.linkedAccounts),
+        } as WizardState;
+      },
       partialize: (state) => ({
         currentStep: state.currentStep,
         completedSteps: state.completedSteps,

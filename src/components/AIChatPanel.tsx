@@ -1,7 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
-import { Send, User, Bot, Sparkles, Brain, Code, Zap, RefreshCcw } from 'lucide-react';
-import { sendMessage, Message } from '../lib/aiService';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Send, User, Bot, Brain, Zap } from 'lucide-react';
+import { sendMessage } from '../lib/aiService';
+import type { Message } from '../lib/aiService';
 import ReactMarkdown from 'react-markdown';
 
 interface AIChatPanelProps {

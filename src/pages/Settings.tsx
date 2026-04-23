@@ -2,6 +2,7 @@ import { useState, useCallback } from "react";
 import { cn } from "@/lib/utils";
 import { Switch } from "@/components/ui/switch";
 import { Slider } from "@/components/ui/slider";
+import useWizardStore, { isLinkedAccountStatus } from "@/store/wizardStore";
 import {
   Settings as SettingsIcon,
   Users,
@@ -73,14 +74,6 @@ const DEFAULT_API_KEYS: ApiKeyField[] = [
   { name: "Docker Token", env: "DOCKER_TOKEN", value: "" },
   { name: "Cloudflare API Key", env: "CLOUDFLARE_API_KEY", value: "" },
 ];
-
-function loadLinkedAccounts(): string[] {
-  try {
-    const raw = localStorage.getItem("workspace_wizard_state");
-    if (raw) return JSON.parse(raw).linkedAccounts ?? [];
-  } catch { /* ignore */ }
-  return ["github", "docker", "huggingface"];
-}
 
 function loadApiKeys(): ApiKeyField[] {
   try {
@@ -217,29 +210,26 @@ function GeneralTab() {
 /* ------------------------------------------------------------------ */
 
 function AccountsTab() {
-  const [linked, setLinked] = useState<string[]>(loadLinkedAccounts);
+  const linkedAccounts = useWizardStore((s) => s.linkedAccounts);
+  const setAccountStatus = useWizardStore((s) => s.setAccountStatus);
 
-  const toggleAccount = useCallback((key: string) => {
-    setLinked((prev) => {
-      const next = prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key];
-      try {
-        const raw = localStorage.getItem("workspace_wizard_state");
-        const state = raw ? JSON.parse(raw) : {};
-        state.linkedAccounts = next;
-        localStorage.setItem("workspace_wizard_state", JSON.stringify(state));
-      } catch { /* ignore */ }
-      return next;
-    });
+  const getAccountStatusLabel = useCallback((status: string) => {
+    if (status === "real_linked") return "Real OAuth linked";
+    if (status === "synthetic_linked") return "Synthetic continuity linked";
+    if (status === "synthetic_pending") return "Synthetic link pending";
+    if (status === "failed") return "Link failed";
+    return "Not linked";
   }, []);
 
   return (
     <div>
       <h1 className="text-[32px] font-bold text-[#F0F4F8] tracking-tight mb-1">Connected Accounts</h1>
-      <p className="text-[#94A3B8] text-sm mb-6">Manage your linked services</p>
+      <p className="text-[#94A3B8] text-sm mb-6">Manage synthetic continuity links and real OAuth upgrades</p>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         {ACCOUNTS.map((acct) => {
-          const isLinked = linked.includes(acct.key);
+          const account = linkedAccounts.find((a) => a.id === acct.key);
+          const isLinked = account ? isLinkedAccountStatus(account.status) : false;
           return (
             <div
               key={acct.key}
@@ -254,11 +244,24 @@ function AccountsTab() {
               <div className="flex-1 min-w-0">
                 <p className="text-[14px] font-semibold text-[#F0F4F8]">{acct.name}</p>
                 <p className="text-[11px] text-[#64748B] mt-0.5">
-                  {isLinked ? "Connected" : "Not linked"}
+                  {account ? getAccountStatusLabel(account.status) : "Not linked"}
                 </p>
               </div>
               <button
-                onClick={() => toggleAccount(acct.key)}
+                onClick={() => {
+                  if (!account) return;
+                  if (isLinked || account.status === "synthetic_pending") {
+                    setAccountStatus(account.id, "disconnected");
+                    return;
+                  }
+                  const syntheticRef = account.authRef ?? `syn_${account.id}_${Math.random().toString(36).slice(2, 10)}`;
+                  setAccountStatus(account.id, "synthetic_linked", {
+                    authKind: "synthetic",
+                    authRef: syntheticRef,
+                    lastLinkedAt: new Date().toISOString(),
+                    lastError: undefined,
+                  });
+                }}
                 className={cn(
                   "px-3 py-1.5 rounded-lg text-[12px] font-semibold transition-all",
                   isLinked
@@ -266,7 +269,7 @@ function AccountsTab() {
                     : "text-[#2563EB] bg-[rgba(37,99,235,0.1)] border border-[rgba(37,99,235,0.2)] hover:bg-[rgba(37,99,235,0.2)]"
                 )}
               >
-                {isLinked ? "Disconnect" : "Connect"}
+                {isLinked || account?.status === "synthetic_pending" ? "Disconnect" : "Link Synthetic"}
               </button>
             </div>
           );
@@ -306,13 +309,13 @@ function ApiKeysTab() {
 
   return (
     <div>
-      <h1 className="text-[32px] font-bold text-[#F0F4F8] tracking-tight mb-1">API Keys & Secrets</h1>
-      <p className="text-[#94A3B8] text-sm mb-6">Manage all your API keys in one secure place</p>
+      <h1 className="text-[32px] font-bold text-[#F0F4F8] tracking-tight mb-1">API Keys</h1>
+      <p className="text-[#94A3B8] text-sm mb-6">Manage provider API keys separately from synthetic account status tokens</p>
 
       <div className="flex items-start gap-2 p-3 rounded-lg bg-[rgba(37,99,235,0.08)] border border-[rgba(37,99,235,0.15)] mb-6">
         <Shield className="w-4 h-4 text-[#2563EB] mt-0.5 shrink-0" />
         <p className="text-[13px] text-[#94A3B8]">
-          Keys are stored locally in your browser and never sent to any servers.
+          API keys are local configuration values. Synthetic continuity tokens are not API secrets and are managed in the Accounts tab.
         </p>
       </div>
 
@@ -401,7 +404,7 @@ function SecurityTab() {
         <SettingRow title="Firewall Rule" description="Auto-configure Windows Firewall rules for WSL and Docker.">
           <Switch checked={firewallRule} onCheckedChange={setFirewallRule} />
         </SettingRow>
-        <SettingRow title="Encrypt Local Secrets" description="Encrypt API keys stored in localStorage with a browser-derived key.">
+        <SettingRow title="Protect Local API Keys" description="Store API keys only on this device. Synthetic continuity tokens are non-secret metadata.">
           <Switch checked={encryptSecrets} onCheckedChange={setEncryptSecrets} />
         </SettingRow>
         <SettingRow title="Share Anonymous Metrics" description="Help improve by sharing anonymous usage data. No personal info.">

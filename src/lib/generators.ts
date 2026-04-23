@@ -1,4 +1,4 @@
-import { GenerationResult } from '../services/geminiService';
+import type { GenerationResult } from '../services/geminiService';
 
 export const generateDockerfile = (result: GenerationResult | null, needsGpu: boolean, setupAdminUser: boolean, enableGoogleAuth: boolean) => {
   if (!result) return "";

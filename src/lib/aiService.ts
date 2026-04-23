@@ -1,7 +1,23 @@
 import { GoogleGenAI } from "@google/genai";
 import { ORCHESTRATOR_SKILLS, ARCHITECT_MEMORY_TEMPLATE } from "../assets/ai_context";
 
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+let aiClient: GoogleGenAI | null = null;
+
+const resolveGeminiApiKey = (): string => {
+  const viteEnv = (import.meta as ImportMeta & { env?: Record<string, string | undefined> }).env;
+  if (viteEnv?.VITE_GEMINI_API_KEY) return viteEnv.VITE_GEMINI_API_KEY;
+  if (viteEnv?.GEMINI_API_KEY) return viteEnv.GEMINI_API_KEY;
+  if (typeof process !== 'undefined' && process.env?.GEMINI_API_KEY) return process.env.GEMINI_API_KEY;
+  return '';
+};
+
+const getAiClient = (): GoogleGenAI | null => {
+  if (aiClient) return aiClient;
+  const apiKey = resolveGeminiApiKey();
+  if (!apiKey) return null;
+  aiClient = new GoogleGenAI({ apiKey });
+  return aiClient;
+};
 
 export interface Message {
   role: 'user' | 'model';
@@ -18,6 +34,11 @@ export const sendMessage = async (
     dynamicSkills?: string;
   }
 ) => {
+  const ai = getAiClient();
+  if (!ai) {
+    return "Gemini API key is not configured. Set VITE_GEMINI_API_KEY to enable AI responses.";
+  }
+
   // Synthesize memory
   const memory = ARCHITECT_MEMORY_TEMPLATE
     .replace('{{LAST_SYNTHESIS_PROMPT}}', context.lastPrompt || 'None')

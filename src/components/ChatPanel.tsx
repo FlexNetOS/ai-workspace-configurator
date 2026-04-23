@@ -7,6 +7,7 @@ import {
 import useChatStore from '@/store/chatStore';
 import useWizardStore from '@/store/wizardStore';
 import useHardwareRegistry, { generateHardwareSkill } from '@/store/hardwareRegistryStore';
+import { sendMessage, type Message as AIMessage } from '@/lib/aiService';
 
 /* ═══════════════════════════════════════════════════════════════
    Context-Aware Response Engine
@@ -88,7 +89,7 @@ function generateResponse(userMsg: string, currentStep: number, completedSteps: 
   }
 
   if (lower.includes('safe') || lower.includes('delete') || lower.includes('privacy') || lower.includes('undo') || lower.includes('rollback')) {
-    return `**Yes, this is designed to be safe.**\n\n🔒 **What it does NOT do:**\n• Delete your files or documents\n• Change your passwords\n• Send data to the cloud\n• Modify system settings without your approval\n\n✅ **What protects you:**\n• A **System Restore Point** is created at Step 3\n• All scripts are **read-only** during the scan phases\n• You **approve the final plan** at Step 10 before anything is installed\n• Changes are **logged** and visible in the Logs panel\n\n💾 Your API keys are stored **locally** in your browser — never on a server.`;
+    return `**Yes, this is designed to be safe.**\n\n🔒 **What it does NOT do:**\n• Delete your files or documents\n• Change your passwords\n• Block setup if OAuth is slow or unavailable\n• Modify system settings without your approval\n\n✅ **What protects you:**\n• A **System Restore Point** is created at Step 3\n• All scripts are **read-only** during the scan phases\n• You **approve the final plan** at Step 10 before anything is installed\n• Account linking uses **synthetic status tokens** first, then optional real OAuth upgrade\n\n💾 Synthetic status tokens are continuity metadata, not API secrets.`;
   }
 
   if (lower.includes('which account') || lower.includes('do i need') || lower.includes('minimum') || lower.includes('all accounts')) {
@@ -115,6 +116,24 @@ function generateResponse(userMsg: string, currentStep: number, completedSteps: 
   return `I'm here to help with your workspace setup!\n\nI can help you:\n• **Explain any step** — just ask "What does Step 4 do?"\n• **Check your progress** — ask "How much longer?"\n• **Fix errors** — tell me what failed and I'll guide you\n• **Explain tech terms** — ask "What is WSL2?"\n• **Navigate** — say "Go to Settings" or "Show me logs"\n\nWhat would you like to know?`;
 }
 
+const buildAiConversation = (
+  history: { role: 'assistant' | 'user' | 'system'; content: string }[],
+  userText: string
+): AIMessage[] => {
+  const trimmed = history
+    .filter((m) => m.role === 'assistant' || m.role === 'user')
+    .slice(-10)
+    .map((m): AIMessage => {
+      const role: AIMessage['role'] = m.role === 'assistant' ? 'model' : 'user';
+      return {
+        role,
+        text: m.content,
+      };
+    });
+
+  return [...trimmed, { role: 'user', text: userText }];
+};
+
 /* ═══════════════════════════════════════════════════════════════
    ChatPanel — Redesigned with no overlapping elements
    ═══════════════════════════════════════════════════════════════ */
@@ -123,6 +142,7 @@ export default function ChatPanel() {
   const { isOpen, toggle, close, messages, addMessage, isTyping, setTyping, suggestedPrompts, setSuggestedPrompts } = useChatStore();
   const currentStep = useWizardStore((s) => s.currentStep);
   const completedSteps = useWizardStore((s) => s.completedSteps);
+  const linkedAccounts = useWizardStore((s) => s.linkedAccounts);
 
   const [input, setInput] = useState('');
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -178,32 +198,56 @@ export default function ChatPanel() {
     setSuggestedPrompts(stepPrompts[currentStep] || ['What does this step do?', 'How much longer?', 'Explain WSL2']);
   }, [currentStep, setSuggestedPrompts]);
 
+  const runAssistantReply = useCallback(async (userText: string) => {
+    const fallback = generateResponse(userText, currentStep, completedSteps);
+    const registry = useHardwareRegistry.getState();
+    const dynamicSkills = registry.entries
+      .filter((entry) => entry.skillId)
+      .map((entry) => `${entry.vendor} ${entry.model} (${entry.componentType})`)
+      .join(', ');
+
+    try {
+      const aiResponse = await sendMessage(
+        buildAiConversation(messages, userText),
+        {
+          lastPrompt: userText,
+          metrics: `${completedSteps.filter(Boolean).length}/15 steps complete`,
+          accounts: linkedAccounts
+            .filter((a) => a.status === 'synthetic_linked' || a.status === 'real_linked')
+            .map((a) => `${a.name}:${a.status}`)
+            .join(', '),
+          enclaveStatus: 'active',
+          dynamicSkills,
+        }
+      );
+
+      // If API key is missing or service fallback text is returned, keep local deterministic response.
+      const responseText = aiResponse.toLowerCase().includes('not configured')
+        ? fallback
+        : aiResponse;
+      addMessage({ role: 'assistant', content: responseText, stepContext: currentStep });
+    } catch {
+      addMessage({ role: 'assistant', content: fallback, stepContext: currentStep });
+    } finally {
+      setTyping(false);
+    }
+  }, [currentStep, completedSteps, linkedAccounts, messages, addMessage, setTyping]);
+
   const handleSend = useCallback(() => {
-    if (!input.trim()) return;
+    if (!input.trim() || isTyping) return;
     const userText = input.trim();
     setInput('');
     addMessage({ role: 'user', content: userText, stepContext: currentStep });
     setTyping(true);
-    const delay = Math.min(800 + userText.length * 15, 2500);
-    setTimeout(() => {
-      const response = generateResponse(userText, currentStep, completedSteps);
-      addMessage({ role: 'assistant', content: response, stepContext: currentStep });
-      setTyping(false);
-    }, delay);
-  }, [input, currentStep, completedSteps, addMessage, setTyping]);
+    void runAssistantReply(userText);
+  }, [input, isTyping, currentStep, addMessage, setTyping, runAssistantReply]);
 
   const handlePromptClick = useCallback((prompt: string) => {
-    setInput(prompt);
-    setTimeout(() => {
-      addMessage({ role: 'user', content: prompt, stepContext: currentStep });
-      setTyping(true);
-      setTimeout(() => {
-        const response = generateResponse(prompt, currentStep, completedSteps);
-        addMessage({ role: 'assistant', content: response, stepContext: currentStep });
-        setTyping(false);
-      }, 1200);
-    }, 100);
-  }, [currentStep, completedSteps, addMessage, setTyping]);
+    if (isTyping) return;
+    addMessage({ role: 'user', content: prompt, stepContext: currentStep });
+    setTyping(true);
+    void runAssistantReply(prompt);
+  }, [isTyping, currentStep, addMessage, setTyping, runAssistantReply]);
 
   return (
     <>

@@ -46,6 +46,7 @@ vi.mock('@google/genai', () => {
 
 describe('Gemini Service', () => {
   it('should process and return a valid workspace configuration', async () => {
+    process.env.GEMINI_API_KEY = 'test-key';
     const result = await generateDevOpsWorkspace('test prompt');
     expect(result.dependencies.base_image).toBe('pop-os:latest');
     expect(result.lifecycle_plan).toHaveLength(1);

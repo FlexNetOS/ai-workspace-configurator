@@ -7,10 +7,14 @@ import AutoDiscoveryPanel from '@/components/AutoDiscoveryPanel';
 import HardwareRegistry from '@/components/HardwareRegistry';
 import useHardwareRegistry from '@/store/hardwareRegistryStore';
 import useWizardStore from '@/store/wizardStore';
-import type { AccountStatus, CheckStatus } from '@/store/wizardStore';
+import { isLinkedAccountStatus } from '@/store/wizardStore';
+import type { Account, AccountStatus, CheckStatus } from '@/store/wizardStore';
 import Terminal from '@/components/Terminal';
 import StepSidebar, { type StepInfo } from '@/components/StepSidebar';
 import ActionBar from '@/components/ActionBar';
+import { Notifications } from '@/components/Notifications';
+import { useNotifications } from '@/hooks/useNotifications';
+import { generateDevOpsWorkspace, type GenerationResult } from '@/services/geminiService';
 import {
   Download, Settings, Save, Shield, Terminal as TerminalIcon,
   RefreshCw, Cpu, Monitor, Link2, CheckCircle2,
@@ -146,6 +150,9 @@ function Step1() {
 function Step2() {
   const { providers, toggleProvider, policies, setPolicy, completeStep } = useWizardStore();
   const [showPlan, setShowPlan] = useState(false);
+  const [isGeneratingPlan, setIsGeneratingPlan] = useState(false);
+  const [generatedPlan, setGeneratedPlan] = useState<GenerationResult | null>(null);
+  const [planError, setPlanError] = useState<string | null>(null);
 
   // Auto-complete when at least Docker (required) is selected
   useEffect(() => {
@@ -177,6 +184,46 @@ function Step2() {
   ];
 
   const selectedCount = providers.filter((p) => p.selected).length;
+  const selectedProviderNames = providers.filter((p) => p.selected).map((p) => p.name);
+
+  const handleGeneratePlan = useCallback(async () => {
+    setShowPlan(true);
+    if (generatedPlan || isGeneratingPlan) return;
+
+    setIsGeneratingPlan(true);
+    setPlanError(null);
+
+    const policySummary = Object.entries(policies)
+      .filter(([, enabled]) => enabled)
+      .map(([key]) => key)
+      .join(', ');
+    const providerSummary = selectedProviderNames.length > 0 ? selectedProviderNames.join(', ') : 'Docker';
+
+    try {
+      const result = await generateDevOpsWorkspace(
+        `Generate an AI workspace plan for Windows 11 with providers: ${providerSummary}. Enabled policies: ${policySummary}.`
+      );
+      setGeneratedPlan(result);
+    } catch (error) {
+      setPlanError(error instanceof Error ? error.message : 'Unable to synthesize plan preview.');
+    } finally {
+      setIsGeneratingPlan(false);
+    }
+  }, [generatedPlan, isGeneratingPlan, policies, selectedProviderNames]);
+
+  const planCards = generatedPlan
+    ? [
+        { label: 'Base Image', value: generatedPlan.dependencies.base_image, icon: <Container className="w-4 h-4" /> },
+        { label: 'Security Score', value: `${generatedPlan.metrics.security_score}/100`, icon: <Shield className="w-4 h-4" /> },
+        { label: 'Lifecycle', value: `${generatedPlan.lifecycle_plan.length} steps generated`, icon: <CheckCircle2 className="w-4 h-4" /> },
+        { label: 'Cloud Cost', value: generatedPlan.metrics.est_cloud_monthly_cost, icon: <HardDrive className="w-4 h-4" /> },
+      ]
+    : [
+        { label: 'Software', value: 'PowerShell 7.x, Docker Desktop, WSL2, Windows Terminal, Zed IDE, Git', icon: <Package className="w-4 h-4" /> },
+        { label: 'AI Tools', value: 'llama.cpp, Ollama, HuggingFace CLI, OpenRouter CLI', icon: <Sparkles className="w-4 h-4" /> },
+        { label: 'Accounts', value: `${selectedCount} providers selected`, icon: <Link2 className="w-4 h-4" /> },
+        { label: 'Security', value: 'System restore point, UAC verification, firewall rules', icon: <Shield className="w-4 h-4" /> },
+      ];
 
   return (
     <motion.div variants={containerVariants} initial="initial" animate="animate" className="space-y-6">
@@ -237,13 +284,14 @@ function Step2() {
 
       <motion.div variants={cardVariants} className="flex justify-center">
         <motion.button
-          onClick={() => setShowPlan(true)}
+          onClick={() => void handleGeneratePlan()}
+          disabled={isGeneratingPlan}
           className="px-6 py-3 rounded-[10px] text-[14px] font-semibold text-white"
           style={{ background: 'linear-gradient(135deg, #2563EB 0%, #06B6D4 100%)' }}
           whileHover={{ y: -1, boxShadow: '0 0 20px rgba(37,99,235,0.25)' }}
           whileTap={{ scale: 0.97 }}
         >
-          Generate Plan Preview
+          {isGeneratingPlan ? 'Synthesizing...' : 'Generate Plan Preview'}
         </motion.button>
       </motion.div>
 
@@ -260,13 +308,19 @@ function Step2() {
               <FileText className="w-5 h-5 text-[#2563EB]" />
               Your Installation Plan
             </h3>
+            {isGeneratingPlan && (
+              <div className="mb-3 text-[12px] text-[#94A3B8] flex items-center gap-2">
+                <Loader2 className="w-3.5 h-3.5 animate-spin text-[#2563EB]" />
+                Generating lifecycle and dependency plan...
+              </div>
+            )}
+            {planError && (
+              <div className="mb-3 text-[12px] text-[#F59E0B]">
+                AI synthesis unavailable: {planError}. Showing baseline safe plan.
+              </div>
+            )}
             <div className="space-y-2">
-              {[
-                { label: 'Software', value: 'PowerShell 7.x, Docker Desktop, WSL2, Windows Terminal, Zed IDE, Git', icon: <Package className="w-4 h-4" /> },
-                { label: 'AI Tools', value: 'llama.cpp, Ollama, HuggingFace CLI, OpenRouter CLI', icon: <Sparkles className="w-4 h-4" /> },
-                { label: 'Accounts', value: `${selectedCount} providers selected`, icon: <Link2 className="w-4 h-4" /> },
-                { label: 'Security', value: 'System restore point, UAC verification, firewall rules', icon: <Shield className="w-4 h-4" /> },
-              ].map((item, i) => (
+              {planCards.map((item, i) => (
                 <motion.div
                   key={i}
                   initial={{ opacity: 0, x: -10 }}
@@ -281,12 +335,24 @@ function Step2() {
                   </div>
                 </motion.div>
               ))}
+              {generatedPlan && generatedPlan.lifecycle_plan.length > 0 && (
+                <div className="pt-2">
+                  <p className="text-[12px] text-[#94A3B8] mb-2">Lifecycle preview</p>
+                  <div className="space-y-1">
+                    {generatedPlan.lifecycle_plan.slice(0, 3).map((step) => (
+                      <div key={step.id} className="text-[11px] text-[#64748B]">
+                        Step {step.id}: {step.title}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
               <div className="flex gap-3 pt-2">
                 <span className="px-3 py-1 rounded-full text-[11px] font-medium bg-[rgba(37,99,235,0.1)] text-[#2563EB] border border-[rgba(37,99,235,0.25)]">
-                  Est. Time: ~45 min
+                  Est. Time: {generatedPlan ? '~30-45 min' : '~45 min'}
                 </span>
                 <span className="px-3 py-1 rounded-full text-[11px] font-medium bg-[rgba(245,158,11,0.1)] text-[#F59E0B] border border-[rgba(245,158,11,0.25)]">
-                  Disk Space: ~12 GB
+                  Disk Space: {generatedPlan ? '~10-14 GB' : '~12 GB'}
                 </span>
               </div>
             </div>
@@ -971,12 +1037,23 @@ function Step8() {
 /* ═══════════════════════════════════════════════════════════════
    STEP 9 — Link Accounts
    ═══════════════════════════════════════════════════════════════ */
+const createSyntheticStatusId = (providerId: string): string =>
+  `syn_${providerId}_${Math.random().toString(36).slice(2, 10)}`;
+
+const maskStatusId = (value?: string): string => {
+  if (!value) return 'pending';
+  if (value.length <= 14) return value;
+  return `${value.slice(0, 8)}...${value.slice(-4)}`;
+};
+
 function Step9() {
   const { linkedAccounts, setAccountStatus, addTerminalLog, completeStep } = useWizardStore();
+  const { notifications, notify, removeNotification } = useNotifications();
   const [connectingId, setConnectingId] = useState<string | null>(null);
+  const [realAuthId, setRealAuthId] = useState<string | null>(null);
 
   useEffect(() => {
-    const connected = linkedAccounts.filter((a) => a.status === 'connected').length;
+    const connected = linkedAccounts.filter((a) => isLinkedAccountStatus(a.status)).length;
     if (connected >= 3) {
       completeStep(9);
     }
@@ -992,24 +1069,192 @@ function Step9() {
     cloudflare: <Cloud className="w-8 h-8 text-[#F48120]" />,
   };
 
-  const connectAccount = (id: string, name: string) => {
-    setConnectingId(id);
-    setAccountStatus(id, 'connecting');
-    addTerminalLog(`> Initiating OAuth flow for ${name}...`);
-    addTerminalLog(`> Opening browser for authentication...`);
+  const connectSynthetic = (account: Account) => {
+    const syntheticRef = account.authRef ?? createSyntheticStatusId(account.id);
+    setConnectingId(account.id);
+    setAccountStatus(account.id, 'synthetic_pending', {
+      authKind: 'synthetic',
+      authRef: syntheticRef,
+      lastError: undefined,
+    });
+    addTerminalLog(`> [${account.name}] Creating synthetic continuity link...`);
+    addTerminalLog(`> [${account.name}] Synthetic status token issued.`);
 
     setTimeout(() => {
-      setAccountStatus(id, 'connected', `${id}_token_${Math.random().toString(36).slice(2, 10)}`);
-      addTerminalLog(`> ✓ ${name} linked successfully`);
-      addTerminalLog(`> Token: ${id.slice(0, 3)}****... authenticated`);
+      setAccountStatus(account.id, 'synthetic_linked', {
+        authKind: 'synthetic',
+        authRef: syntheticRef,
+        lastLinkedAt: new Date().toISOString(),
+      });
+      addTerminalLog(`> ✓ ${account.name} linked via synthetic continuity token`);
+      addTerminalLog(`> Synthetic status ID: ${maskStatusId(syntheticRef)}`);
+      notify(`${account.name} linked with synthetic status token.`, 'success');
       setConnectingId(null);
     }, 2000);
   };
 
+  const disconnectAccount = (account: Account) => {
+    setAccountStatus(account.id, 'disconnected');
+    addTerminalLog(`> [${account.name}] Link disconnected.`);
+    notify(`${account.name} disconnected.`, 'info');
+  };
+
+  const connectRealAuth = async (account: Account) => {
+    if (realAuthId || connectingId) return;
+
+    const syntheticRef = account.authRef ?? createSyntheticStatusId(account.id);
+    setRealAuthId(account.id);
+    addTerminalLog(`> [${account.name}] Requesting real OAuth URL from Node auth API...`);
+
+    if (!isLinkedAccountStatus(account.status)) {
+      setAccountStatus(account.id, 'synthetic_pending', {
+        authKind: 'synthetic',
+        authRef: syntheticRef,
+      });
+      setTimeout(() => {
+        setAccountStatus(account.id, 'synthetic_linked', {
+          authKind: 'synthetic',
+          authRef: syntheticRef,
+          lastLinkedAt: new Date().toISOString(),
+        });
+      }, 800);
+    }
+
+    try {
+      const urlResp = await fetch(
+        `/api/auth/url/${account.id}?origin=${encodeURIComponent(window.location.origin)}`,
+        { method: 'GET' }
+      );
+
+      if (!urlResp.ok) {
+        throw new Error(`Auth API returned ${urlResp.status}`);
+      }
+
+      const data = await urlResp.json() as {
+        available: boolean;
+        authUrl?: string;
+        state?: string;
+        reason?: string;
+      };
+
+      if (!data.available || !data.authUrl || !data.state) {
+        const reason = data.reason ?? 'OAuth configuration unavailable';
+        addTerminalLog(`> [${account.name}] Real auth unavailable: ${reason}`);
+        setAccountStatus(account.id, 'synthetic_linked', {
+          authKind: 'synthetic',
+          authRef: syntheticRef,
+          lastError: reason,
+          lastLinkedAt: new Date().toISOString(),
+        });
+        notify(`${account.name}: real auth unavailable, synthetic link kept.`, 'info');
+        setRealAuthId(null);
+        return;
+      }
+
+      const authPopup = window.open(
+        data.authUrl,
+        `oauth_${account.id}`,
+        'width=540,height=740,noopener,noreferrer'
+      );
+
+      if (!authPopup) {
+        const reason = 'Popup blocked by browser';
+        addTerminalLog(`> [${account.name}] ${reason}. Keeping synthetic link.`);
+        notify(`${account.name}: popup blocked, synthetic link kept.`, 'warning');
+        setAccountStatus(account.id, 'synthetic_linked', {
+          authKind: 'synthetic',
+          authRef: syntheticRef,
+          lastError: reason,
+        });
+        setRealAuthId(null);
+        return;
+      }
+
+      let attempts = 0;
+      const maxAttempts = 30;
+      const poll = window.setInterval(async () => {
+        attempts += 1;
+        try {
+          const statusResp = await fetch(`/api/auth/status/${account.id}?state=${encodeURIComponent(data.state!)}`);
+          if (!statusResp.ok) return;
+
+          const statusData = await statusResp.json() as {
+            status: 'pending' | 'real_linked' | 'failed';
+            sessionRef?: string;
+            error?: string;
+          };
+
+          if (statusData.status === 'real_linked') {
+            window.clearInterval(poll);
+            try {
+              authPopup.close();
+            } catch {
+              // Ignore popup close failures.
+            }
+            setAccountStatus(account.id, 'real_linked', {
+              authKind: 'real',
+              authRef: statusData.sessionRef ?? syntheticRef,
+              lastLinkedAt: new Date().toISOString(),
+              lastError: undefined,
+            });
+            addTerminalLog(`> ✓ [${account.name}] Real OAuth linked successfully.`);
+            notify(`${account.name} upgraded to real OAuth link.`, 'success');
+            setRealAuthId(null);
+            return;
+          }
+
+          if (statusData.status === 'failed') {
+            window.clearInterval(poll);
+            try {
+              authPopup.close();
+            } catch {
+              // Ignore popup close failures.
+            }
+            const reason = statusData.error ?? 'OAuth callback rejected';
+            setAccountStatus(account.id, 'synthetic_linked', {
+              authKind: 'synthetic',
+              authRef: syntheticRef,
+              lastError: reason,
+            });
+            addTerminalLog(`> [${account.name}] Real OAuth failed: ${reason}. Synthetic link remains active.`);
+            notify(`${account.name}: OAuth failed, synthetic link remains active.`, 'warning');
+            setRealAuthId(null);
+            return;
+          }
+        } catch {
+          // transient polling error; continue polling until timeout
+        }
+
+        if (attempts >= maxAttempts || authPopup.closed) {
+          window.clearInterval(poll);
+          addTerminalLog(`> [${account.name}] OAuth timed out. Synthetic link remains active.`);
+          setAccountStatus(account.id, 'synthetic_linked', {
+            authKind: 'synthetic',
+            authRef: syntheticRef,
+            lastError: 'OAuth timeout',
+          });
+          notify(`${account.name}: OAuth timed out, synthetic link remains active.`, 'info');
+          setRealAuthId(null);
+        }
+      }, 1200);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown OAuth error';
+      addTerminalLog(`> [${account.name}] Auth API failed: ${message}`);
+      setAccountStatus(account.id, 'synthetic_linked', {
+        authKind: 'synthetic',
+        authRef: syntheticRef,
+        lastError: message,
+      });
+      notify(`${account.name}: auth server unavailable, synthetic link kept.`, 'warning');
+      setRealAuthId(null);
+    }
+  };
+
   const statusBadge = (status: AccountStatus) => {
     switch (status) {
-      case 'connected': return <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-[rgba(16,185,129,0.1)] text-[#10B981] border border-[rgba(16,185,129,0.25)] flex items-center gap-1"><Check className="w-3 h-3" />Linked</span>;
-      case 'connecting': return <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-[rgba(37,99,235,0.1)] text-[#2563EB] border border-[rgba(37,99,235,0.25)] flex items-center gap-1"><Loader2 className="w-3 h-3 animate-spin" />Connecting</span>;
+      case 'real_linked': return <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-[rgba(16,185,129,0.1)] text-[#10B981] border border-[rgba(16,185,129,0.25)] flex items-center gap-1"><Check className="w-3 h-3" />Real Linked</span>;
+      case 'synthetic_linked': return <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-[rgba(37,99,235,0.1)] text-[#2563EB] border border-[rgba(37,99,235,0.25)] flex items-center gap-1"><Link2 className="w-3 h-3" />Synthetic Linked</span>;
+      case 'synthetic_pending': return <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-[rgba(37,99,235,0.1)] text-[#2563EB] border border-[rgba(37,99,235,0.25)] flex items-center gap-1"><Loader2 className="w-3 h-3 animate-spin" />Pending</span>;
       case 'failed': return <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-[rgba(239,68,68,0.1)] text-[#EF4444] border border-[rgba(239,68,68,0.25)]">Failed</span>;
       default: return <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-[rgba(255,255,255,0.04)] text-[#64748B] border border-[rgba(255,255,255,0.08)]">Not Connected</span>;
     }
@@ -1020,11 +1265,11 @@ function Step9() {
       <motion.div variants={cardVariants}>
         <h1 className="text-[32px] font-bold text-[#F0F4F8] tracking-[-0.02em] mb-2">Link Your Accounts</h1>
         <p className="text-[14px] text-[#94A3B8] max-w-[600px] leading-[1.6]">
-          Connect the services you'll use for AI development. Each connection is verified automatically.
+          Synthetic status tokens keep setup moving even when OAuth is unavailable. Upgrade to real OAuth anytime.
         </p>
         <p className="text-[12px] text-[#06B6D4] mt-2 flex items-center gap-1">
           <Info className="w-3.5 h-3.5" />
-          Tip: You can skip any account and link it later from Settings.
+          Synthetic IDs are masked in the UI and used only for continuity metadata.
         </p>
       </motion.div>
 
@@ -1034,11 +1279,11 @@ function Step9() {
             key={account.id}
             variants={cardVariants}
             className={`rounded-2xl border p-5 transition-all ${
-              account.status === 'connected'
+              isLinkedAccountStatus(account.status)
                 ? 'border-[rgba(16,185,129,0.3)] bg-[rgba(16,185,129,0.04)]'
                 : 'border-[rgba(255,255,255,0.06)] bg-[#0B1120]'
             }`}
-            whileHover={{ y: -2, borderColor: account.status === 'connected' ? 'rgba(16,185,129,0.4)' : 'rgba(255,255,255,0.10)' }}
+            whileHover={{ y: -2, borderColor: isLinkedAccountStatus(account.status) ? 'rgba(16,185,129,0.4)' : 'rgba(255,255,255,0.10)' }}
           >
             <div className="flex items-center gap-3 mb-3">
               {accountIcons[account.id] || <Globe className="w-8 h-8 text-[#94A3B8]" />}
@@ -1049,34 +1294,62 @@ function Step9() {
             </div>
             <p className="text-[12px] text-[#64748B] mb-4">{account.description}</p>
 
-            {account.status === 'connected' && account.token && (
+            {(account.status === 'synthetic_linked' || account.status === 'real_linked') && account.authRef && (
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 className="mb-3 p-2 rounded-lg bg-[rgba(16,185,129,0.06)] border border-[rgba(16,185,129,0.15)]"
               >
-                <p className="text-[10px] text-[#64748B] font-mono uppercase tracking-wider">Token</p>
-                <p className="text-[11px] text-[#10B981] font-mono">{account.token}</p>
+                <p className="text-[10px] text-[#64748B] font-mono uppercase tracking-wider">
+                  {account.status === 'real_linked' ? 'OAuth Session Ref' : 'Synthetic Status ID'}
+                </p>
+                <p className="text-[11px] text-[#10B981] font-mono">{maskStatusId(account.authRef)}</p>
               </motion.div>
             )}
 
-            <motion.button
-              onClick={() => account.status === 'disconnected' ? connectAccount(account.id, account.name) : setAccountStatus(account.id, 'disconnected')}
-              disabled={connectingId === account.id}
-              className={`w-full py-2 rounded-[10px] text-[13px] font-semibold transition-all disabled:opacity-40 ${
-                account.status === 'connected'
-                  ? 'text-[#EF4444] border border-[rgba(239,68,68,0.2)] hover:bg-[rgba(239,68,68,0.05)]'
-                  : 'text-white'
-              }`}
-              style={account.status !== 'connected' ? { background: 'linear-gradient(135deg, #2563EB 0%, #06B6D4 100%)' } : {}}
-              whileHover={{ y: -1 }}
-              whileTap={{ scale: 0.97 }}
-            >
-              {connectingId === account.id ? 'Connecting...' : account.status === 'connected' ? 'Disconnect' : 'Connect'}
-            </motion.button>
+            <div className="grid grid-cols-1 gap-2">
+              <motion.button
+                onClick={() => {
+                  if (isLinkedAccountStatus(account.status) || account.status === 'synthetic_pending') {
+                    disconnectAccount(account);
+                  } else {
+                    connectSynthetic(account);
+                  }
+                }}
+                disabled={connectingId === account.id || realAuthId === account.id}
+                className={`w-full py-2 rounded-[10px] text-[13px] font-semibold transition-all disabled:opacity-40 ${
+                  isLinkedAccountStatus(account.status)
+                    ? 'text-[#EF4444] border border-[rgba(239,68,68,0.2)] hover:bg-[rgba(239,68,68,0.05)]'
+                    : 'text-white'
+                }`}
+                style={!isLinkedAccountStatus(account.status) ? { background: 'linear-gradient(135deg, #2563EB 0%, #06B6D4 100%)' } : {}}
+                whileHover={{ y: -1 }}
+                whileTap={{ scale: 0.97 }}
+              >
+                {connectingId === account.id
+                  ? 'Linking...'
+                  : isLinkedAccountStatus(account.status) || account.status === 'synthetic_pending'
+                    ? 'Disconnect'
+                    : 'Create Synthetic Link'}
+              </motion.button>
+
+              {account.status !== 'real_linked' && (
+                <motion.button
+                  onClick={() => void connectRealAuth(account)}
+                  disabled={realAuthId === account.id || connectingId === account.id}
+                  className="w-full py-2 rounded-[10px] text-[12px] font-semibold text-[#94A3B8] border border-[rgba(255,255,255,0.12)] hover:bg-[rgba(255,255,255,0.04)] transition-all disabled:opacity-40"
+                  whileHover={{ y: -1 }}
+                  whileTap={{ scale: 0.97 }}
+                >
+                  {realAuthId === account.id ? 'Waiting For OAuth...' : 'Upgrade To Real OAuth'}
+                </motion.button>
+              )}
+            </div>
           </motion.div>
         ))}
       </div>
+
+      <Notifications notifications={notifications} removeNotification={removeNotification} />
     </motion.div>
   );
 }
@@ -1095,7 +1368,7 @@ function Step10() {
   }, [planApproved, completeStep]);
 
   const selectedProviders = providers.filter((p) => p.selected);
-  const connectedAccounts = linkedAccounts.filter((a) => a.status === 'connected');
+  const connectedAccounts = linkedAccounts.filter((a) => isLinkedAccountStatus(a.status));
   const securityScore = Math.round(((providers.filter((p) => p.selected).length / 8) * 40) + ((connectedAccounts.length / 7) * 30) + 30);
 
   const planSections = [
@@ -1801,7 +2074,7 @@ function Step14() {
    STEP 15 — Hardware Tuning & Celebration
    ═══════════════════════════════════════════════════════════════ */
 function Step15() {
-  const { completedSteps, tuningApplied, setTuningApplied, completeStep } = useWizardStore();
+  const { completedSteps, tuningApplied, setTuningApplied, completeStep, linkedAccounts } = useWizardStore();
   const [showConfetti, setShowConfetti] = useState(false);
 
   useEffect(() => {
@@ -1847,6 +2120,7 @@ function Step15() {
   };
 
   const completedCount = completedSteps.filter(Boolean).length;
+  const linkedCount = linkedAccounts.filter((account) => isLinkedAccountStatus(account.status)).length;
 
   return (
     <motion.div variants={containerVariants} initial="initial" animate="animate" className="space-y-6">
@@ -1992,7 +2266,7 @@ function Step15() {
               <Check className="w-4 h-4 text-[#10B981] inline mr-2" />8 software packages installed
             </p>
             <p className="text-[14px] text-[#94A3B8]">
-              <Check className="w-4 h-4 text-[#10B981] inline mr-2" />5 accounts connected
+              <Check className="w-4 h-4 text-[#10B981] inline mr-2" />{linkedCount} accounts connected
             </p>
             <p className="text-[14px] text-[#94A3B8]">
               <Check className="w-4 h-4 text-[#10B981] inline mr-2" />3 environments provisioned
@@ -2020,7 +2294,7 @@ function Step15() {
                   completedSteps: completedSteps.filter(Boolean).length,
                   totalSteps: 15,
                   providers: completedSteps.filter(Boolean).length > 0 ? 'Configured' : 'Pending',
-                  accounts: 'Linked',
+                  accounts: `${linkedCount} linked`,
                   environments: 'Provisioned',
                   version: '3.0.0',
                 };

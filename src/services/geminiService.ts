@@ -1,6 +1,24 @@
 import { GoogleGenAI, Type } from "@google/genai";
 
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+let aiClient: GoogleGenAI | null = null;
+
+const resolveGeminiApiKey = (): string => {
+  const viteEnv = (import.meta as ImportMeta & { env?: Record<string, string | undefined> }).env;
+  if (viteEnv?.VITE_GEMINI_API_KEY) return viteEnv.VITE_GEMINI_API_KEY;
+  if (viteEnv?.GEMINI_API_KEY) return viteEnv.GEMINI_API_KEY;
+  if (typeof process !== 'undefined' && process.env?.GEMINI_API_KEY) return process.env.GEMINI_API_KEY;
+  return '';
+};
+
+const getAiClient = (): GoogleGenAI => {
+  if (aiClient) return aiClient;
+  const apiKey = resolveGeminiApiKey();
+  if (!apiKey) {
+    throw new Error('Gemini API key is not configured. Set VITE_GEMINI_API_KEY.');
+  }
+  aiClient = new GoogleGenAI({ apiKey });
+  return aiClient;
+};
 
 export interface WorkspaceDependencies {
   base_image: string;
@@ -50,6 +68,7 @@ export interface GenerationResult {
 }
 
 export async function generateDevOpsWorkspace(prompt: string): Promise<GenerationResult> {
+  const ai = getAiClient();
   const result = await ai.models.generateContent({
     model: "gemini-3-flash-preview",
     contents: [{
@@ -165,6 +184,7 @@ export async function generateDevOpsWorkspace(prompt: string): Promise<Generatio
 
 export async function validateDockerfile(dockerfile: string): Promise<{ valid: boolean, logs: string[] }> {
   try {
+    const ai = getAiClient();
     const response = await ai.models.generateContent({
       model: "gemini-3-flash-preview",
       contents: [{
