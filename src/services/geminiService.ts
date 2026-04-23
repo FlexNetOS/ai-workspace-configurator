@@ -34,10 +34,19 @@ export interface ProjectMetrics {
   best_practice_adherence: number;
 }
 
+export interface LifecycleStep {
+  id: number;
+  title: string;
+  description: string;
+  status: 'pending' | 'running' | 'completed' | 'failed' | 'idle';
+  logs: string[];
+}
+
 export interface GenerationResult {
   dependencies: WorkspaceDependencies;
   metrics: ProjectMetrics;
   readme: string;
+  lifecycle_plan: LifecycleStep[];
 }
 
 export async function generateDevOpsWorkspace(prompt: string): Promise<GenerationResult> {
@@ -46,18 +55,29 @@ export async function generateDevOpsWorkspace(prompt: string): Promise<Generatio
     contents: [{
       role: "user",
       parts: [{
-        text: `You are a Principal AI Infrastructure Architect. Synthesize a complete high-performance environment for: "${prompt}".
+        text: `You are a Principal AI Infrastructure Architect. Synthesize a complete high-performance environment and a 15-step workforce lifecycle plan for: "${prompt}".
         
         CRITICAL INVOLVEMENT:
         1. Base: Prioritize high-performance distros: AthenaOS (Nix-based) or Pop!_OS with NVIDIA 595+ driver stack support.
-        2. Drivers: Mention Pop!_OS NVIDIA 595 driver PRs (pop-os/nvidia-graphics-drivers-595 and pop-os/linux/pull/412) if relevant to GPU setups.
-        3. Shell: Enforce ZSH with Oh My Zsh as the default terminal environment. Configure ~/.local/bin/ in PATH.
-        4. Hardware: Dynamic optimization for RTX 5090 (CUDA 13.2+). Detect and map high-thread counts.
-        5. AI Stack: Auto-install llama.cpp with Qwen 3.5 9B. Include CLI tools: gh, docker, huggingface-cli.
-        6. Workspace: Prefer ZED IDE with VSCode fallback configurations.
-        7. Logic: Parallel build flags (MAKEFLAGS), multi-container Docker Compose for complex dependency mapping.
-        8. CI/CD & IaC: Full pipelines and Cloud blueprints (AWS/GCP/Azure).
-        9. Metrics: Security score, Cloud cost projections, and best practice adherence.
+        2. Drivers: Mention Pop!_OS NVIDIA 595 driver PRs if relevant to GPU setups.
+        3. Shell: Enforce ZSH + Oh My Zsh. Configure ~/.local/bin/ in PATH.
+        4. Hardware: Dynamic optimization for RTX 5090 (CUDA 13.2+).
+        5. Lifecycle: You MUST strictly generate exactly 15 steps in the 'lifecycle_plan' matching these mandates:
+           1. Install configurator + initialize logs/artifacts
+           2. User selects provider + policy → generate plan preview
+           3. Create rollback checkpoint (restore point + snapshots)
+           4. Verify permissions/security/install readiness (admin, UAC, virtualization, reboot pending)
+           5. Install latest PowerShell via MSI + verify
+           6. Run Windows Update loop + upgrade all apps (winget) until fully current
+           7. Auto-discover hardware/drivers/network → inventory artifacts
+           8. Identify each device; user-assisted vendor login/registration + serial/warranty + resource tagging
+           9. Link accounts (Docker, GitHub, HF, OpenRouter, Notion, Google, Cloudflare, …) + validate
+           10. User approves final plan
+           11. Apply configs + run idempotent install scripts (resume-safe)
+           12. Install stack: Docker → WSL2 → IDE/terminal → distro/home scaffolding → llama.cpp → models → CLIs
+           13. Run E2E tests
+           14. Provision sandbox/dev/sim environment
+           15. Hardware tests + tuning + optional BIOS adjustments
         
         Return the result in JSON format.`
       }]
@@ -111,15 +131,32 @@ export async function generateDevOpsWorkspace(prompt: string): Promise<Generatio
             },
             required: ["security_score", "est_cloud_monthly_cost", "vulnerability_count", "best_practice_adherence"]
           },
-          readme: { type: Type.STRING }
+          readme: { type: Type.STRING },
+          lifecycle_plan: {
+            type: Type.ARRAY,
+            items: {
+              type: Type.OBJECT,
+              properties: {
+                id: { type: Type.NUMBER },
+                title: { type: Type.STRING },
+                description: { type: Type.STRING },
+                status: { type: Type.STRING, enum: ['pending', 'running', 'completed', 'failed', 'idle'] },
+                logs: { type: Type.ARRAY, items: { type: Type.STRING } }
+              },
+              required: ["id", "title", "description", "status", "logs"]
+            }
+          }
         },
-        required: ["dependencies", "metrics", "readme"]
+        required: ["dependencies", "metrics", "readme", "lifecycle_plan"]
       }
     }
   });
 
   try {
-    return JSON.parse(result.text || "{}") as GenerationResult;
+    const data = JSON.parse(result.text || "{}") as GenerationResult;
+    // Map initial status to idle for all steps
+    data.lifecycle_plan = data.lifecycle_plan.map(s => ({ ...s, status: 'idle' }));
+    return data;
   } catch (e) {
     console.error("Failed to parse Gemini response:", e);
     throw new Error("Invalid response format from AI");

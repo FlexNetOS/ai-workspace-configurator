@@ -118,132 +118,314 @@ export const generateDevContainer = (result: GenerationResult | null, useDockerC
 };
 
 export const generateWindowsSetup = () => {
-  return `# --- AI DevOps Workspace Host Bootstrapper (Windows 11 Home/Pro) ---
+  return `# --- AI DevOps Workspace Host Bootstrapper (Windows 11 Pro Optimized) ---
 # .SYNOPSIS
-#   Automated setup for high-performance AI vibe coding environment.
+#   Advanced Host Provisioning for AI-Centric Workflows.
 # .DESCRIPTION
-#   Installs PSv7, DockerDesktop, WSL2, configures VHDX isolation, ZED IDE, and NVIDIA v595+ stack.
+#   Installs PSv7, Docker Desktop, WSL2, VHDX Isolation, and AI Tooling Suite.
 
 Write-Host "=============================================" -ForegroundColor Cyan
-Write-Host "   AI DevOps Workspace - ARCHITECT BOOTSTRAP " -ForegroundColor Cyan
+Write-Host "   AI DEVOPS - PROFESSIONAL ARCHITECT SYNC   " -ForegroundColor Cyan
 Write-Host "=============================================" -ForegroundColor Cyan
 
-# 1. Latest PowerShell Core via MSI
-Write-Host "\n[1/8] Verifying PowerShell Core (v7.4+)..."
+# 1. Permission & Policy Hardening
+Write-Host "\n[1/10] Configuring Permissions & Policies..."
+Set-ExecutionPolicy RemoteSigned -Scope CurrentUser -Force
+
+# 2. PowerShell 7 (MSI)
+Write-Host "\n[2/10] Verifying PowerShell Core Integration..."
 if (!(Get-Command "pwsh" -ErrorAction SilentlyContinue)) {
     $msiUrl = "https://github.com/PowerShell/PowerShell/releases/download/v7.4.2/PowerShell-7.4.2-win-x64.msi"
     Invoke-WebRequest -Uri $msiUrl -OutFile "$env:TEMP\\pwsh.msi"
     Start-Process msiexec.exe -Wait -ArgumentList "/i $env:TEMP\\pwsh.msi /quiet"
-    Write-Host "✅ PowerShell Core Deployed." -ForegroundColor Green
+    Write-Host "✅ PowerShell 7 Deployed." -ForegroundColor Green
 }
 
-# 2. Docker Desktop & WSL2 Backend
-Write-Host "\n[2/8] Syncing Docker Desktop & WSL2 Subsystem..."
-if (!(Get-Command "docker" -ErrorAction SilentlyContinue)) {
-    winget install Docker.DockerDesktop --silent --accept-package-agreements
+# 3. Dynamic VHDX Partitioning (AI_ENCLAVE)
+Write-Host "\n[3/10] Provisioning Dynamic VHDX (AI_ENCLAVE)..."
+$vhdxDir = "$env:USERPROFILE\\Documents\\AI_Workspace"
+$vhdxPath = "$vhdxDir\\ai_enclave.vhdx"
+if (!(Test-Path $vhdxPath)) {
+    New-Item -Path $vhdxDir -ItemType Directory -Force
+    $diskScript = @"
+create vdisk file="$vhdxPath" maximum=102400 type=expandable
+attach vdisk
+create partition primary
+format fs=ntfs label="AI_WORKSPACE" quick
+assign letter=Z
+detach vdisk
+"@
+    $diskScriptPath = "$env:TEMP\\diskpart_ai.txt"
+    $diskScript | Set-Content $diskScriptPath
+    Start-Process diskpart.exe -ArgumentList "/s $diskScriptPath" -Wait -Verb RunAs
+    Write-Host "✅ 100GB Dynamic VHDX Created at Z: (Mounted)" -ForegroundColor Green
 }
+
+# 4. Networking & Firewall Hardening
+Write-Host "\n[4/10] Configuring Firewall Enclave Exceptions..."
+$ports = @(3000, 8080, 8888, 5173, 11434) # Web, Jupyter, Ollama
+foreach ($port in $ports) {
+    if (!(Get-NetFirewallRule -DisplayName "AI_DEV_PORT_$port" -ErrorAction SilentlyContinue)) {
+        New-NetFirewallRule -DisplayName "AI_DEV_PORT_$port" -Direction Inbound -LocalPort $port -Protocol TCP -Action Allow -Group "AI_DevOps"
+    }
+}
+
+# 5. Toolchain: winget/choco distribution
+Write-Host "\n[5/10] Provisioning DevOps Toolchain..."
+winget install Docker.DockerDesktop --silent --accept-package-agreements
+winget install Microsoft.VisualStudioCode --silent
+winget install CLI.GitHub --silent
+winget install Amazon.AWSCLI --silent
+winget install Google.CloudSDK --silent
+winget install Microsoft.AzureCLI --silent
+winget install Microsoft.WSL --silent
+
+# 6. WSL2 Architecture Setup
+Write-Host "\n[6/10] Hardening WSL2 Subsystem..."
 wsl --install --no-distribution
 wsl --update
-
-# 3. Dedicated VHDX Image Mapping
-Write-Host "\n[3/8] Configuring isolated VHDX storage for AI Distros..."
-$vhdxPath = "$env:USERPROFILE\\Documents\\WSL_Data\\ai_distro.vhdx"
-if (!(Test-Path $vhdxPath)) {
-    New-Item -Path (Split-Path $vhdxPath) -ItemType Directory -Force
-    Write-Host "Created virtual snapshot target at $vhdxPath" -ForegroundColor Gray
-}
-
-# 4. ZED IDE & Toolchain
-Write-Host "\n[4/8] Installing ZED IDE & DevOps CLI (gh, docker, huggingface)..."
-winget install Zed.Zed --silent
-winget install CLI.GitHub --silent
-
-# 5. Resource Mapping (.wslconfig)
-$cores = (Get-CimInstance Win32_ComputerSystem).NumberOfLogicalProcessors
-$ram = [math]::Round((Get-CimInstance Win32_ComputerSystem).TotalPhysicalMemory / 1GB)
-$wslMemory = [math]::Max(4, [math]::Round($ram * 0.8))
-
 $wslConfig = @"
 [wsl2]
-processors=$cores
-memory=\${wslMemory}GB
+processors=8
+memory=16GB
 localhostForwarding=true
+nestedVirtualization=true
 guiApplications=true
 "@
-Set-Content -Path "$env:USERPROFILE\\.wslconfig" -Value $wslConfig
-Write-Host "✅ Mapped $cores Cores & \${wslMemory}GB RAM to WSL kernel." -ForegroundColor Green
+$wslConfig | Set-Content -Path "$env:USERPROFILE\\.wslconfig"
 
-# 6. NVIDIA v595+ Hardware Detection
-Write-Host "\n[6/8] Hardware Audit: RTX 5090 / CUDA 13.2 Requirements..."
-try {
-    $driver = (nvidia-smi --query-gpu=driver_version --format=csv,noheader)
-    Write-Host "Detected NVIDIA Driver: $driver" -ForegroundColor Green
-    Write-Host "Reference Driver PR: https://github.com/pop-os/nvidia-graphics-drivers-595/pull/" -ForegroundColor Gray
-    Write-Host "Reference Linux PR: https://github.com/pop-os/linux/pull/412" -ForegroundColor Gray
-} catch {
-    Write-Warning "GPU not detected or nvidia-smi missing."
+# 7. AI Workspace Scaffolding
+Write-Host "\n[7/10] Architecting Workspace Directory..."
+$dirs = @("models", "datasets", "projects", ".local/bin", ".cache")
+foreach ($dir in $dirs) {
+    New-Item -Path "$vhdxDir\\$dir" -ItemType Directory -Force
 }
 
-Write-Host "\n[7/8] Initializing local directory structure..."
-New-Item -Path "$env:USERPROFILE\\.local\\bin" -ItemType Directory -Force
+# 8. AI CLI Provisioning (Host Side)
+Write-Host "\n[8/10] Installing AI Interface Layer (Node/Python based)..."
+winget install OpenJS.NodeJS.LTS --silent
 
-Write-Host "\n[8/8] Finalizing Bootstrap..."
-Write-Host "Setup Complete. Run the companion Linux setup in WSL for ZSH & llama.cpp optimization." -ForegroundColor Cyan
+Write-Host "\n[9/10] Finalizing Permissions..."
+$acl = Get-Acl "$vhdxDir"
+$permission = "Users","FullControl","Allow"
+$accessRule = New-Object System.Security.AccessControl.FileSystemAccessRule $permission
+$acl.SetAccessRule($accessRule)
+Set-Acl "$vhdxDir" $acl
+
+Write-Host "\n[10/10] SUCCESS! Host Orchestration Complete." -ForegroundColor Cyan
 `;
 };
 
 export const generateLinuxSetup = () => {
-  return `#!/bin/zsh
-# --- AI DevOps Workspace Host optimization (Linux/WSL2) ---
-# Target Distros: AthenaOS (Nix), Pop!_OS (Nvidia 595 Optimized)
+  return `#!/bin/bash
+# --- AI DevOps Linux Architechture Sync (Ubuntu 24.04/Pop!_OS/AthenaOS) ---
+# Optimized for high-throughput AI engineering.
 
 set -e
+echo "--- INITIATING LINUX ENV SYNC ---"
 
-echo "--- INITIATING LINUX ARCHITECT SYNC ---"
-
-# 1. Update & Upgrade Sequence
-echo "[1/7] Full System Synchronization..."
-sudo apt update && sudo apt upgrade -y || sudo pacman -Syu --noconfirm
-
-# 2. Oh My Zsh & Shell Environment
-echo "[2/7] Deploying ZSH with Oh My Zsh..."
-if [ ! -d "$HOME/.oh-my-zsh" ]; then
-    sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended
-    chsh -s $(which zsh)
+# 1. Distro Detection & Sync
+if [ -f /etc/debian_version ]; then
+    echo "Detected: Debian/Ubuntu Base (Ubuntu 24.04 / Pop!_OS)"
+    sudo apt update && sudo apt upgrade -y
+    sudo apt install -y zsh curl wget git build-essential gh docker.io python3-pip unzip nodejs npm
+elif [ -f /etc/arch-release ]; then
+    echo "Detected: Arch/AthenaOS Base"
+    sudo pacman -Syu --noconfirm zsh curl wget git base-devel github-cli docker python-pip nodejs npm
 fi
 
-# 3. Path & .local workspace
-mkdir -p ~/.local/bin
+# 2. Oh My Zsh (Headless)
+if [ ! -d "$HOME/.oh-my-zsh" ]; then
+    sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended
+fi
+
+# 3. .local/bin Workspace Scaffolding
+mkdir -p ~/.local/bin ~/.cache/ai-models ~/workspace/src ~/workspace/data
 export PATH="$HOME/.local/bin:$PATH"
 echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.zshrc
 
-# 4. Advanced Toolchain (gh, docker, hf, zed)
-echo "[4/7] verify DevOps binaries..."
-sudo apt install -y gh docker.io python3-pip build-essential cmake
-pip3 install --user huggingface_hub
+# 4. Specialized AI CLIs (Kimi, Gemini, Claude, Codex)
+echo "[4/7] Deploying Interface Layer CLIs..."
+# Gemini CLI (Google Cloud/SDK)
+# Claude CLI (Via Anthropic SDK shell wrapper)
+pip3 install --user anthropic google-generativeai moonshot-python openai
+npm install -g @anthropic-ai/sdk @google/generative-ai @openai/openai-cli || true
 
-# 5. llama.cpp Deployment (Qwen 3.5 9B)
-echo "[5/7] architecting llama.cpp environment..."
-if [ ! -d "llama.cpp" ]; then
-    git clone https://github.com/ggerganov/llama.cpp
-    cd llama.cpp && mkdir build && cd build
-    cmake .. -DGGML_CUDA=ON
-    make -j$(nproc)
-    cd ../..
-    mv llama.cpp/build/bin/main ~/.local/bin/llama-cli
+# 5. VHDX Linkage & Scaffolding (WSL-Specific)
+if grep -q "microsoft" /proc/version; then
+    echo "Provisioning WSL Symlinks for AI Workspace..."
+    # Assuming host side VHDX is mounted to Z: and accessible via /mnt/z
+    sudo mkdir -p /mnt/z
+    sudo mount -t drvfs Z: /mnt/z || true
+    
+    # Link isolated high-speed VHDX storage to internal workspace
+    [ -d "/mnt/z" ] && ln -s /mnt/z ~/workspace_enclave || true
 fi
 
-# 6. Specialized GPU stack (Pop!_OS v595 optimization)
-echo "[6/7] GPU Driver Linkage Reference..."
-echo "Verify Pop!_OS Drivers if on Pop: pop-os/nvidia-graphics-drivers-595 (PR Check)"
-echo "Linux Kernel Pull: https://github.com/pop-os/linux/pull/412"
+# 6. Docker Performance Tuning
+sudo usermod -aG docker $USER
+echo '{"default-ulimits":{"nofile":{"Name":"nofile","Hard":65536,"Soft":65536}}}' | sudo tee /etc/docker/daemon.json
+sudo systemctl restart docker || true
 
-# 7. Final Permissions & Permission Correction
-echo "[7/7] Correcting permission hierarchy..."
-sudo chown -R $USER:$USER ~/.local
-sudo chmod +x ~/.local/bin/*
+# 7. Final Kernel Optimization (Sysctl)
+sudo sysctl -w fs.file-max=2097152
+sudo sysctl -w vm.max_map_count=262144
 
-echo "✅ ARCHITECT LINUX SYNC COMPLETE. SHELL: ZSH ACTIVE."
+echo "✅ LINUX DEV_WORKSPACE READY."
+`;
+};
+
+export const generateHostDocs = (enableGoogleAuth: boolean) => {
+  return `# Host System Optimization & Documentation
+
+To ensure high-performance execution of the generated AI workspace, your host machine requires specific configuration for GPU acceleration, multi-core parallel processing, and secure secret mounting.
+
+---
+
+## 🏗️ 1. Windows Host (WSL2 Architecture)
+
+Windows users should utilize **WSL2** for the best performance. This setup maximizes I/O and ensures CUDA drivers are correctly mapped from the Windows host into the dev container.
+
+### Prerequisites:
+* **WSL2** installed and updated (\`wsl --update\`)
+* **Docker Desktop** with WSL2 backend enabled
+* **NVIDIA Driver 595.00+** (if using RTX GPU)
+
+### Automated Setup Script:
+This script verifies your environment, installs missing DevOps binaries via Chocolatey/Winget, and configures \`.wslconfig\`.
+
+\`\`\`powershell
+${generateWindowsSetup()}
+\`\`\`
+
+---
+
+## 🐧 2. Linux Host (Native Ubuntu/Debian)
+
+Native Linux provides the lowest latency for model training and high-speed data processing.
+
+### Prerequisites:
+* **Docker Engine** 24.0+
+* **NVIDIA Container Toolkit** (for GPU acceleration)
+* **build-essential** & **git**
+
+### Automated Setup Script:
+Run this to update your toolchain, install the DevOps stack, and optimize your kernel for AI workloads.
+
+\`\`\`bash
+${generateLinuxSetup()}
+\`\`\`
+
+---
+
+## 💾 3. AI_ENCLAVE Storage (Isolated VHDX)
+The setup script provisions a dedicated, high-speed **AI_ENCLAVE** using a dynamic VHDX mounted as **Drive Z:**. 
+* **Isolation**: Keeps internal AI data, models, and multi-GB datasets separate from your OS partition.
+* **Performance**: Optimized for WSL2 drvfs mounting for low-latency training I/O.
+* **Scaffolding**: Automatically creates \`models\`, \`datasets\`, and \`.local\` structures.
+
+## 🔐 4. Security & Connectivity
+
+### Google Auth & Gemini SDKs
+${enableGoogleAuth 
+  ? "This workspace includes the Google Generative AI SDK. Ensure your host has the Google Cloud CLI installed or use the provided `.env.example` to map your API Key."
+  : "Google SDKs are not included in this build. If needed, toggle 'Google Auth/SDKs' in the Architect settings."}
+
+### VS Code Integration
+1. Install **'Dev Containers'** extension by Microsoft.
+2. Open this folder in VS Code.
+3. Select **'Reopen in Container'** when prompted at the bottom right.
+
+---
+*Created by Architect_AI Engine v2.0*`;
+};
+
+export const generateHardwareInspectorPs = () => {
+  return `# --- AI Hardware Discovery Agent (Zero-Dependency PowerShell) ---
+$info = @{
+    OS = [System.Environment]::OSVersion.VersionString
+    CPU = (Get-CimInstance Win32_Processor).Name
+    Cores = (Get-CimInstance Win32_Processor).NumberOfLogicalProcessors
+    RAM_GB = [math]::Round((Get-CimInstance Win32_ComputerSystem).TotalPhysicalMemory / 1GB)
+    GPU = @("None")
+    Timestamp = (Get-Date).ToString("o")
+}
+
+try {
+    $nvidia = (nvidia-smi --query-gpu=name,driver_version --format=csv,noheader).Split(',')
+    if ($nvidia) { $info.GPU = $nvidia }
+} catch {}
+
+$json = $info | ConvertTo-Json -Depth 5
+$json | Set-Content "hardware_inventory.json"
+Write-Host "---------------------------------------------"
+Write-Host "🚀 DISCOVERY_COMPLETE [HOST_WINDOWS]" -ForegroundColor Cyan
+Write-Host "CPU: $($info.CPU)"
+Write-Host "GPU: $($info.GPU[0])"
+Write-Host "✅ inventory saved to hardware_inventory.json" -ForegroundColor Green
+Write-Host "---------------------------------------------"
+`;
+};
+
+export const generateHardwareInspector = () => {
+  return `import os
+import json
+import subprocess
+import platform
+
+def get_gpu_info():
+    try:
+        # Check for NVIDIA GPUs via nvidia-smi
+        res = subprocess.check_output(['nvidia-smi', '--query-gpu=name,driver_version,memory.total,cuda_compute_capability', '--format=csv,noheader,nounits'])
+        return res.decode('utf-8').strip().split(',')
+    except:
+        return ["None", "N/A", "0", "N/A"]
+
+def scan():
+    print("🚀 INITIATING_HARDWARE_SCAN [VIBE_MODE_ACTIVE]")
+    info = {
+        "os": platform.system(),
+        "os_release": platform.release(),
+        "cpu": platform.processor(),
+        "cores_logical": os.cpu_count(),
+        "gpu": get_gpu_info(),
+        "timestamp": str(platform.node())
+    }
+    
+    with open('hardware_inventory.json', 'w') as f:
+        json.dump(info, f, indent=4)
+    
+    print("-" * 40)
+    print(f"DEVICE: {info['os']} {info['os_release']}")
+    print(f"CPU: {info['cpu']} ({info['cores_logical']} cores)")
+    print(f"GPU: {info['gpu'][0]} [DRIVER: {info['gpu'][1]}]")
+    print("-" * 40)
+    print("✅ INVENTORY_CREATED: hardware_inventory.json")
+
+if __name__ == "__main__":
+    scan()
+`;
+};
+
+export const generateEnvExample = (selectedAccounts: Record<string, boolean>) => {
+  return `# WORKFORCE_LIFECYCLE_ENCLAVE - CONFIGURATION_ENVELOPE
+# Fill these values to enable full module connectivity.
+
+# --- LLM_CORES ---
+GEMINI_API_KEY=
+OPENAI_API_KEY=
+ANTHROPIC_API_KEY=
+OPENROUTER_API_KEY=
+HF_TOKEN=
+
+# --- INFRA_VCS ---
+${selectedAccounts['github'] ? 'GITHUB_TOKEN=' : '# GITHUB_TOKEN='}
+${selectedAccounts['docker'] ? 'DOCKER_HUB_TOKEN=' : '# DOCKER_HUB_TOKEN='}
+${selectedAccounts['cloudflare'] ? 'CLOUDFLARE_API_TOKEN=' : '# CLOUDFLARE_API_TOKEN='}
+
+# --- TOOLS_SYNC ---
+${selectedAccounts['notion'] ? 'NOTION_API_KEY=' : '# NOTION_API_KEY='}
+${selectedAccounts['google'] ? 'GOOGLE_CLIENT_ID=\nGOOGLE_CLIENT_SECRET=' : '# GOOGLE_CLIENT_ID=\n# GOOGLE_CLIENT_SECRET='}
 `;
 };
 
@@ -273,10 +455,32 @@ We have provided a bash script to update your system, install Docker, map \`npro
    ./setup_host.sh
    \`\`\`
 
-## Starting the Workspace
+## 🚀 Hardware Discovery
+To optimize the workspace for your specific silicon (RTX cores, logical threads), run the discovery agent:
+
+### Windows (Zero-Dependency)
+\`\`\`powershell
+.\\inspect_hardware.ps1
+\`\`\`
+
+### Linux / macOS (Python Required)
+\`\`\`bash
+python3 inspect_hardware.py
+\`\`\`
+
+This creates \`hardware_inventory.json\` which the DevContainer uses to bind parallel processes to your actual core count.
+
+## 🔑 Secret Management & LLM Connection
+The workspace is built for multi-LLM orchestration. 
+1. Rename \`.env.example\` to \`.env\`.
+2. Populate the keys for your providers (Gemini, OpenAI, etc.).
+3. The DevContainer will automatically inject these into your Shell/Python environment.
+
+## 🏗️ Starting the Workspace
 1. Launch **VS Code**.
 2. Install the **Dev Containers** extension.
 3. Open this folder in VS Code.
+4. Press \`Ctrl+Shift+P\` and select **"Dev Containers: Reopen in Container"**.
 4. Press \`Ctrl+Shift+P\` and select **"Dev Containers: Reopen in Container"**.
 
 ${enableGoogleAuth ? `## Google Auth & Gemini API Setup

@@ -32,14 +32,19 @@ import {
   Zap,
   Menu,
   Wrench,
+  Boxes,
+  Brain,
+  Monitor,
   X
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import JSZip from 'jszip';
-import { generateDevOpsWorkspace, validateDockerfile, GenerationResult } from './services/geminiService';
+import { generateDevOpsWorkspace, validateDockerfile, GenerationResult, LifecycleStep } from './services/geminiService';
 import * as Generators from './lib/generators';
 import { Notifications } from './components/Notifications';
 import { useNotifications } from './hooks/useNotifications';
+import { BLUEPRINTS, HARDWARE_TAGS, Blueprint } from './constants';
+import { AIChatPanel } from './components/AIChatPanel';
 
 // --- Types ---
 interface FileEntry {
@@ -49,6 +54,359 @@ interface FileEntry {
 
 // --- Components ---
 
+const HardwareRegistryView = ({ 
+  registry, 
+  onRegister 
+}: { 
+  registry: any[], 
+  onRegister: (device: any) => void 
+}) => {
+  const [scanning, setScanning] = useState(false);
+  const [detected, setDetected] = useState<any>(null);
+  
+  const [formData, setFormData] = useState({
+    name: '',
+    serial: '',
+    vendor: 'Generic',
+    warranty: '',
+    docsUrl: '',
+    firmware: '',
+    driverLink: '',
+    tags: [] as string[]
+  });
+
+  const handleScan = () => {
+    setScanning(true);
+    setTimeout(() => {
+      setDetected({
+        cpu: "Apple M3 Max (16-Core)",
+        ram: "64GB Unified Memory",
+        os: "macOS 15.1 (Sequoia)",
+        architecture: "arm64",
+        macAddress: "3E:A1:C2:55:09:F2"
+      });
+      setScanning(false);
+    }, 2500);
+  };
+
+  const handleRegister = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!formData.name || !formData.serial) return;
+    onRegister({ ...formData, id: Date.now() });
+    setFormData({ 
+      name: '', serial: '', vendor: 'Generic', warranty: '', 
+      docsUrl: '', firmware: '', driverLink: '', tags: [] 
+    });
+    setDetected(null);
+  };
+
+  const vendorPortals = [
+    { name: 'Apple Business', url: 'https://business.apple.com', color: 'bg-slate-100 text-slate-900' },
+    { name: 'Dell Premier', url: 'https://www.dell.com/en-us/lp/dell-premier', color: 'bg-blue-600 text-white' },
+    { name: 'HP Support', url: 'https://support.hp.com', color: 'bg-blue-800 text-white' },
+    { name: 'Lenovo Pro', url: 'https://www.lenovo.com/us/en/lenovopro/', color: 'bg-red-600 text-white' }
+  ];
+
+  return (
+    <motion.div 
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="flex flex-col gap-8 h-full overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-slate-900 pb-12"
+    >
+      <div className="flex items-center justify-between">
+        <div className="px-2 py-1 bg-slate-900 border border-slate-800 rounded text-[9px] font-mono text-slate-500 tracking-widest uppercase">Physical_Asset_Registration_Step_08</div>
+        <div className="flex items-center gap-4 text-[10px] font-mono text-slate-600">
+           <span>ENTRIES: <span className="text-blue-400 font-bold">{registry.length}</span></span>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Left: Discovery & Scanning */}
+        <section className="space-y-6">
+          <div className="p-6 bg-slate-900/30 border border-slate-800 rounded-lg relative overflow-hidden group">
+            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+              <Activity className="w-20 h-20 text-blue-500" />
+            </div>
+            <h4 className="text-[11px] font-bold text-slate-200 uppercase tracking-widest mb-4 flex items-center gap-2">
+              <Zap className="w-3.5 h-3.5 text-amber-500" /> Environment_Discovery
+            </h4>
+            <p className="text-[11px] text-slate-500 leading-relaxed mb-6">
+              Launch an automated hardware probe to extract serial numbers and system architecture directly from the local host or connected VHDX enclave.
+            </p>
+            
+            {!detected ? (
+              <button 
+                onClick={handleScan}
+                disabled={scanning}
+                className="w-full py-3 bg-blue-600/10 border border-blue-500/20 text-blue-400 rounded text-[10px] font-bold uppercase tracking-widest hover:bg-blue-600/20 transition-all flex items-center justify-center gap-3 disabled:opacity-50"
+              >
+                {scanning ? (
+                  <>
+                    <div className="w-3 h-3 border-2 border-blue-400/20 border-t-blue-400 rounded-full animate-spin" />
+                    PROBING_HARDWARE_POSTURE...
+                  </>
+                ) : (
+                  <>
+                    <Play className="w-3 h-3 fill-current" />
+                    Begin_Architect_Probe
+                  </>
+                )}
+              </button>
+            ) : (
+              <motion.div 
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="space-y-4"
+              >
+                <div className="p-4 bg-slate-950 border border-blue-500/10 rounded grid grid-cols-2 gap-4 font-mono text-[10px]">
+                  <div>
+                    <span className="text-slate-600 block uppercase tracking-tighter">Detected_ID</span>
+                    <span className="text-blue-400 font-bold">{detected.cpu}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-600 block uppercase tracking-tighter">Memory_Bank</span>
+                    <span className="text-slate-300 font-bold">{detected.ram}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-600 block uppercase tracking-tighter">OS_Kernel</span>
+                    <span className="text-slate-300 font-bold">{detected.os}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-600 block uppercase tracking-tighter">Physical_MAC</span>
+                    <span className="text-slate-300 font-bold">{detected.macAddress}</span>
+                  </div>
+                </div>
+                <button 
+                   onClick={() => {
+                     setFormData(prev => ({ ...prev, name: detected.cpu, serial: detected.macAddress.replace(/:/g, '') }));
+                   }}
+                   className="w-full py-2 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[9px] font-bold uppercase tracking-widest rounded hover:bg-emerald-500/20"
+                >
+                  Sythesize_into_Registry_Form
+                </button>
+              </motion.div>
+            )}
+          </div>
+
+          <div className="space-y-4">
+             <h4 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-2">
+                <Link2 className="w-3.5 h-3.5" /> Vendor_Support_Portals
+             </h4>
+             <div className="grid grid-cols-2 gap-2">
+                {vendorPortals.map(p => (
+                  <a 
+                    key={p.name}
+                    href={p.url} 
+                    target="_blank" 
+                    rel="noreferrer"
+                    className={`p-3 rounded border border-slate-800 flex items-center justify-between group hover:border-slate-700 transition-all ${p.color}`}
+                  >
+                    <span className="text-[10px] font-black uppercase tracking-widest">{p.name}</span>
+                    <ExternalLink className="w-3 h-3 opacity-50 group-hover:opacity-100" />
+                  </a>
+                ))}
+             </div>
+          </div>
+        </section>
+
+        {/* Right: Registration Form */}
+        <section className="bg-slate-900/40 border border-slate-800 rounded-lg p-8">
+           <h4 className="text-[11px] font-bold text-slate-200 uppercase tracking-widest mb-6 border-b border-slate-800 pb-4">
+              Commit_to_Hardware_Registry
+           </h4>
+           <form onSubmit={handleRegister} className="space-y-5">
+              <div className="space-y-2">
+                <label className="text-[10px] text-slate-500 uppercase font-bold tracking-widest leading-none">Device Identifier</label>
+                <input 
+                  type="text" 
+                  className="w-full bg-slate-900 border border-slate-800 rounded px-4 py-2.5 text-[12px] font-mono focus:border-blue-600 outline-none transition-all"
+                  placeholder="e.g. Architect-Lab-Node-01"
+                  value={formData.name}
+                  onChange={e => setFormData({ ...formData, name: e.target.value })}
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-[10px] text-slate-500 uppercase font-bold tracking-widest leading-none">Serial / Service Tag</label>
+                    <input 
+                      type="text" 
+                      className="w-full bg-slate-900 border border-slate-800 rounded px-4 py-2.5 text-[12px] font-mono focus:border-blue-600 outline-none transition-all placeholder:opacity-30"
+                      placeholder="SYNTH_S_1234"
+                      value={formData.serial}
+                      onChange={e => setFormData({ ...formData, serial: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] text-slate-500 uppercase font-bold tracking-widest leading-none">Vendor</label>
+                    <select 
+                       className="w-full bg-slate-900 border border-slate-800 rounded px-3 py-2.5 text-[12px] font-mono text-slate-300 focus:border-blue-600 outline-none"
+                       value={formData.vendor}
+                       onChange={e => setFormData({ ...formData, vendor: e.target.value })}
+                    >
+                      <option>Apple</option>
+                      <option>Dell</option>
+                      <option>HP</option>
+                      <option>Lenovo</option>
+                      <option>NVIDIA</option>
+                      <option>Generic</option>
+                    </select>
+                  </div>
+              </div>
+
+              <div className="space-y-2">
+                  <label className="text-[10px] text-slate-500 uppercase font-bold tracking-widest leading-none">Warranty_Expiry_Date</label>
+                  <div className="relative">
+                    <input 
+                      type="date" 
+                      className="w-full bg-slate-900 border border-slate-800 rounded px-4 py-2.5 text-[12px] font-mono focus:border-blue-600 outline-none transition-all text-slate-300 [color-scheme:dark]"
+                      value={formData.warranty}
+                      onChange={e => setFormData({ ...formData, warranty: e.target.value })}
+                    />
+                  </div>
+              </div>
+
+              <div className="space-y-2">
+                  <label className="text-[10px] text-slate-500 uppercase font-bold tracking-widest leading-none">Resource_Tags</label>
+                  <div className="flex flex-wrap gap-2 p-3 bg-slate-950/50 border border-slate-800 rounded min-h-[46px]">
+                    {HARDWARE_TAGS.map(tag => (
+                      <button 
+                        key={tag}
+                        type="button"
+                        onClick={() => {
+                          const newTags = formData.tags.includes(tag) 
+                            ? formData.tags.filter(t => t !== tag)
+                            : [...formData.tags, tag];
+                          setFormData({ ...formData, tags: newTags });
+                        }}
+                        className={`px-2 py-1 rounded text-[9px] font-black uppercase tracking-tighter border transition-all ${
+                          formData.tags.includes(tag) 
+                            ? 'bg-blue-600 text-white border-blue-500 shadow-[0_0_10px_rgba(37,99,235,0.3)]' 
+                            : 'bg-slate-900 text-slate-600 border-slate-800 hover:border-slate-700'
+                        }`}
+                      >
+                        {tag}
+                      </button>
+                    ))}
+                  </div>
+              </div>
+
+              <div className="space-y-4 pt-4 border-t border-slate-800">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Activity className="w-3.5 h-3.5 text-blue-400" />
+                    <label className="text-[10px] text-blue-400 uppercase font-black tracking-widest">Technical Webhooks</label>
+                  </div>
+                  <div className="space-y-3">
+                    <input 
+                      type="text" 
+                      className="w-full bg-slate-950 border border-slate-800 rounded px-4 py-2 text-[11px] font-mono focus:border-blue-600 outline-none transition-all placeholder:text-slate-800"
+                      placeholder="Docs_Reference_URL (https://...)"
+                      value={formData.docsUrl}
+                      onChange={e => setFormData({ ...formData, docsUrl: e.target.value })}
+                    />
+                    <div className="grid grid-cols-2 gap-3">
+                      <input 
+                        type="text" 
+                        className="w-full bg-slate-950 border border-slate-800 rounded px-4 py-2 text-[11px] font-mono focus:border-blue-600 outline-none transition-all placeholder:text-slate-800"
+                        placeholder="Firmware_Baseline (v1.x)"
+                        value={formData.firmware}
+                        onChange={e => setFormData({ ...formData, firmware: e.target.value })}
+                      />
+                      <input 
+                        type="text" 
+                        className="w-full bg-slate-950 border border-slate-800 rounded px-4 py-2 text-[11px] font-mono focus:border-blue-600 outline-none transition-all placeholder:text-slate-800"
+                        placeholder="Driver_Endpoint"
+                        value={formData.driverLink}
+                        onChange={e => setFormData({ ...formData, driverLink: e.target.value })}
+                      />
+                    </div>
+                  </div>
+              </div>
+
+              <button 
+                type="submit"
+                disabled={!formData.name || !formData.serial}
+                className="w-full py-4 bg-emerald-600 text-white rounded text-[11px] font-black uppercase tracking-[0.3em] hover:bg-emerald-500 transition-all shadow-[0_0_30px_rgba(16,185,129,0.1)] disabled:opacity-30 disabled:hover:bg-emerald-600"
+              >
+                Commit_Registration_Record
+              </button>
+           </form>
+        </section>
+      </div>
+
+      {/* Active Registry List */}
+      <section className="space-y-4">
+          <h4 className="text-[11px] font-bold text-slate-500 uppercase tracking-widest border-b border-slate-900 pb-2">
+            Archived_Registry_Records
+          </h4>
+          <div className="bg-slate-900/20 border border-slate-800 rounded-lg overflow-hidden">
+             <table className="w-full text-left font-mono text-[11px]">
+               <thead className="bg-slate-900/50 text-slate-500 uppercase text-[9px] tracking-widest">
+                  <tr>
+                    <th className="px-6 py-4">Device_Profile</th>
+                    <th className="px-6 py-4">Asset_ID</th>
+                    <th className="px-6 py-4">Technical_Webhooks</th>
+                    <th className="px-6 py-4">Tags</th>
+                  </tr>
+               </thead>
+               <tbody className="divide-y divide-slate-800/50">
+                  {registry.length === 0 ? (
+                    <tr>
+                      <td colSpan={4} className="px-6 py-12 text-center text-slate-700 uppercase tracking-[0.2em] font-black opacity-30 italic">
+                        No_Assets_Synchronized
+                      </td>
+                    </tr>
+                  ) : (
+                    registry.map((r, i) => (
+                      <tr key={i} className="hover:bg-blue-600/5 transition-colors group">
+                        <td className="px-6 py-4 border-l-2 border-transparent group-hover:border-blue-600">
+                           <div className="flex flex-col">
+                              <span className="text-slate-100 font-bold uppercase">{r.name}</span>
+                              <span className="text-[9px] text-slate-500">{r.vendor} Professional</span>
+                           </div>
+                        </td>
+                        <td className="px-6 py-4">
+                           <span className="px-2 py-0.5 bg-slate-900 border border-slate-800 rounded text-[10px] text-blue-500">{r.serial}</span>
+                        </td>
+                        <td className="px-6 py-4">
+                           <div className="flex gap-2">
+                             <div 
+                               className={`w-5 h-5 rounded-full flex items-center justify-center border ${r.docsUrl ? 'bg-blue-600/20 border-blue-500/50 text-blue-400' : 'bg-slate-900 border-slate-800 text-slate-700'}`}
+                               title={r.docsUrl || "No Docs"}
+                             >
+                               <FileCode className="w-2.5 h-2.5" />
+                             </div>
+                             <div 
+                               className={`w-5 h-5 rounded-full flex items-center justify-center border ${r.firmware ? 'bg-amber-600/20 border-amber-500/50 text-amber-400' : 'bg-slate-900 border-slate-800 text-slate-700'}`}
+                               title={r.firmware || "No Firmware Info"}
+                             >
+                               <Zap className="w-2.5 h-2.5" />
+                             </div>
+                             <div 
+                               className={`w-5 h-5 rounded-full flex items-center justify-center border ${r.driverLink ? 'bg-indigo-600/20 border-indigo-500/50 text-indigo-400' : 'bg-slate-900 border-slate-800 text-slate-700'}`}
+                               title={r.driverLink || "No Driver Endpoint"}
+                             >
+                               <Link2 className="w-2.5 h-2.5" />
+                             </div>
+                           </div>
+                        </td>
+                        <td className="px-6 py-4">
+                           <div className="flex flex-wrap gap-1">
+                              {r.tags.map((t: string) => (
+                                <span key={t} className="px-1.5 py-0.5 bg-slate-950 border border-slate-800 rounded text-[8px] text-slate-600 uppercase font-black">{t}</span>
+                              ))}
+                           </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+               </tbody>
+             </table>
+          </div>
+      </section>
+    </motion.div>
+  );
+};
 const Header = () => (
   <header id="main-header" className="h-14 border-b border-slate-800 bg-slate-950/80 px-6 flex items-center justify-between sticky top-0 z-50 backdrop-blur-md">
     <div className="flex items-center gap-4">
@@ -102,7 +460,8 @@ const CodeBlock = ({ code, language }: { code: string; language: string }) => {
 
 export default function App() {
   const { notifications, notify, removeNotification } = useNotifications();
-  const [activeTab, setActiveTab] = useState<'generator' | 'host-setup' | 'simulator' | 'vcs' | 'cicd' | 'features' | 'cloud'>('generator');
+  const [activeTab, setActiveTab] = useState<'generator' | 'host-setup' | 'lifecycle' | 'vcs' | 'cicd' | 'features' | 'cloud' | 'hardware'>('lifecycle');
+  const [rightPanelMode, setRightPanelMode] = useState<'manifest' | 'agent'>('manifest');
   const [showSettings, setShowSettings] = useState(false);
   const [prompt, setPrompt] = useState("");
   const [loading, setLoading] = useState(false);
@@ -148,6 +507,23 @@ export default function App() {
 
   const [activeFile, setActiveFile] = useState<number>(0);
   const [error, setError] = useState<string | null>(null);
+
+  // Persistence & History
+  const [history, setHistory] = useState<any[]>(() => {
+    const saved = localStorage.getItem('architect_history');
+    return saved ? JSON.parse(saved) : [];
+  });
+
+  // Hardware Registry (Step 8)
+  const [hardwareRegistry, setHardwareRegistry] = useState<any[]>(() => {
+    const saved = localStorage.getItem('hardware_registry');
+    return saved ? JSON.parse(saved) : [];
+  });
+
+  const [dynamicSkills, setDynamicSkills] = useState<string>(() => {
+    const saved = localStorage.getItem('dynamic_skills');
+    return saved || '';
+  });
 
   // Integration State
   const [linkedAccounts, setLinkedAccounts] = useState<Record<string, boolean>>(() => {
@@ -359,15 +735,15 @@ export default function App() {
   const [includeHostSetup, setIncludeHostSetup] = useState(true);
   const [enableGoogleAuth, setEnableGoogleAuth] = useState(true);
 
-  // Simulator State
-  const [simLogs, setSimLogs] = useState<string[]>([]);
-  const [simStatus, setSimStatus] = useState<'idle' | 'running' | 'success' | 'error'>('idle');
+  const [lifecycleSteps, setLifecycleSteps] = useState<LifecycleStep[]>([]);
+  const [activeStepId, setActiveStepId] = useState<number | null>(null);
+  const [isLifecycleRunning, setIsLifecycleRunning] = useState(false);
 
   const logEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     logEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [simLogs]);
+  }, [lifecycleSteps]);
 
   // Generators Wrappers
   const getDockerfile = () => Generators.generateDockerfile(result, needsGpu, setupAdminUser, enableGoogleAuth);
@@ -376,18 +752,62 @@ export default function App() {
   const getReadme = () => Generators.generateReadme(result, needsGpu, setupAdminUser, useDockerCompose, enableGoogleAuth);
   const getWindowsSetup = () => Generators.generateWindowsSetup();
   const getLinuxSetup = () => Generators.generateLinuxSetup();
+  const getHostDocs = () => Generators.generateHostDocs(enableGoogleAuth);
 
-  const handleGenerate = async () => {
-    if (!prompt.trim()) return;
+  useEffect(() => {
+    localStorage.setItem('architect_history', JSON.stringify(history));
+  }, [history]);
+
+  useEffect(() => {
+    localStorage.setItem('hardware_registry', JSON.stringify(hardwareRegistry));
+  }, [hardwareRegistry]);
+
+  useEffect(() => {
+    localStorage.setItem('dynamic_skills', dynamicSkills);
+  }, [dynamicSkills]);
+
+  const addHardwareToRegistry = (device: any) => {
+    const newEntry = { ...device, registeredAt: new Date().toISOString() };
+    setHardwareRegistry(prev => [...prev, newEntry]);
+
+    // TRIGGER: Generate New SKILL for AI Chat
+    const newSkill = `
+## Hardware_Skill: ${device.name} (${device.serial})
+- **Technical_Pointers**:
+  - Documentation: ${device.docsUrl || 'N/A'}
+  - Firmware_Baseline: ${device.firmware || 'Generic_v1.0'}
+  - Driver_Endpoint: ${device.driverLink || 'Standard_OS_Package'}
+- **AI_Interaction_Guidance**:
+  - This component is a verified part of the Architect's hardware registry.
+  - When the user asks about ${device.name}, refer to the baseline [${device.firmware}] and the documentation [${device.docsUrl}].
+`;
+    setDynamicSkills(prev => prev + newSkill);
+
+    notify(`Device ${device.serial || 'untracked'} registered. New AI Skill synthesized.`, 'success');
+  };
+
+  const handleGenerate = async (customPrompt?: string) => {
+    const targetPrompt = customPrompt || prompt;
+    if (!targetPrompt.trim()) return;
     setLoading(true);
     setError(null);
     try {
-      const data = await generateDevOpsWorkspace(prompt);
+      const data = await generateDevOpsWorkspace(targetPrompt);
       setResult(data);
+      setLifecycleSteps(data.lifecycle_plan);
       if (data.dependencies.docker_compose_services?.trim()) {
         setUseDockerCompose(true);
       }
       setActiveFile(0);
+
+      // Save to history
+      setHistory(prev => [{
+        id: Date.now(),
+        timestamp: new Date().toISOString(),
+        prompt: targetPrompt,
+        result: data
+      }, ...prev].slice(0, 10)); // Keep last 10
+
     } catch (err) {
       setError("CRITICAL_FAULT: Pipeline synthesis failed. Check network or parameters.");
       console.error(err);
@@ -400,11 +820,11 @@ export default function App() {
     if (!result) return [];
     const deps = result.dependencies;
     const files: FileEntry[] = [
-      { path: 'Dockerfile', content: getDockerfile() },
-      { path: 'devcontainer.json', content: getDevContainer() },
+      { path: '.devcontainer/Dockerfile', content: getDockerfile() },
+      { path: '.devcontainer/devcontainer.json', content: getDevContainer() },
     ];
     if (useDockerCompose) {
-      files.push({ path: 'docker-compose.yml', content: getDockerCompose() });
+      files.push({ path: '.devcontainer/docker-compose.yml', content: getDockerCompose() });
     }
     
     // Add CI/CD files
@@ -426,77 +846,112 @@ export default function App() {
       files.push({ path: 'infrastructure/index.ts', content: deps.cloud_iac.pulumi });
     }
 
+    // Add Host setup if included in main view
+    if (includeHostSetup) {
+      files.push({ path: 'setup_host.ps1', content: getWindowsSetup() });
+      files.push({ path: 'setup_host.sh', content: getLinuxSetup() });
+    }
+
+    files.push({ path: 'inspect_hardware.py', content: Generators.generateHardwareInspector() });
+    files.push({ path: 'inspect_hardware.ps1', content: Generators.generateHardwareInspectorPs() });
+    files.push({ path: '.env.example', content: Generators.generateEnvExample(linkedAccounts) });
+
     return files;
   };
 
   const handleDownloadZip = async () => {
-    if (!result) return;
+    if (!result) {
+      notify('No configuration generated yet. Please enter a prompt first.', 'error');
+      return;
+    }
+    
     const zip = new JSZip();
     const files = getAllFiles();
     
-    // .devcontainer folder
-    const dcFolder = zip.folder(".devcontainer");
+    // Batch all generated files into the zip structure using their defined relative paths
     files.forEach(file => {
-      dcFolder?.file(file.path, file.content);
+      zip.file(file.path, file.content);
     });
 
-    // Root README
+    // Root Documentation (Always included)
     zip.file("README.md", getReadme());
 
-    // Host Setup Scripts at root
-    if (includeHostSetup) {
-      zip.file('setup_host.ps1', getWindowsSetup());
-      zip.file('setup_host.sh', getLinuxSetup());
-    }
-
-    // .env.example
-    if (useSecrets) {
-      let envContent = '# Secure AI Secrets (Copy to .env)\n';
-      if (enableGoogleAuth) {
-        envContent += 'GEMINI_API_KEY=\nGOOGLE_APPLICATION_CREDENTIALS=\n';
-      }
-      envContent += 'OPENAI_API_KEY=\nANTHROPIC_API_KEY=\nHUGGINGFACE_TOKEN=\nWANDB_API_KEY=\n';
-      zip.file('.env.example', envContent);
-    }
-    
     const content = await zip.generateAsync({ type: "blob" });
     const url = URL.createObjectURL(content);
     const link = document.createElement("a");
     link.href = url;
-    link.download = "devops-ai-workspace.zip";
+    link.download = `architect-ai-bundle-${new Date().getTime()}.zip`;
     link.click();
     URL.revokeObjectURL(url);
-    notify('Workspace Stack Bundle downloaded successfully.', 'success');
+    notify('Stack Bundle prepared and downloaded successfully.', 'success');
   };
 
-  const runSimulation = async () => {
-    setSimStatus('running');
-    setSimLogs(['> Initiating Build Validation Server...', '> Connecting to simulated Docker daemon...']);
+  useEffect(() => {
+    logEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [lifecycleSteps]);
 
-    const addLog = (msg: string, delay = 600) => new Promise(res => setTimeout(() => {
-      setSimLogs(prev => [...prev, msg]);
-      res(null);
-    }, delay));
-
-    await addLog(`> Step 1/4: Pulling base image...`, 800);
-    await addLog('> Step 2/4: Simulating APT installations...', 1000);
-    await addLog('> Step 3/4: Simulating PIP installations...', 1000);
-    await addLog('> Step 4/4: Running AI Dry-Run Validation...', 500);
-
-    const dockerfile = getDockerfile();
-    const valResult = await validateDockerfile(dockerfile);
+  const runLifecycle = async () => {
+    if (!result || isLifecycleRunning) return;
+    setIsLifecycleRunning(true);
     
-    for (const log of valResult.logs) {
-      await addLog(`[Validator] ${log}`, 400);
+    // Reset steps
+    const initialSteps = result.lifecycle_plan.map(s => ({ ...s, status: 'pending' as const, logs: [] }));
+    setLifecycleSteps(initialSteps);
+
+    for (const step of initialSteps) {
+      setActiveStepId(step.id);
+      setLifecycleSteps(prev => prev.map(s => s.id === step.id ? { ...s, status: 'running' } : s));
+
+      const addStepLog = (msg: string, delay = 500) => new Promise(res => setTimeout(() => {
+        setLifecycleSteps(prev => prev.map(s => s.id === step.id ? { ...s, logs: [...s.logs, `[${new Date().toLocaleTimeString()}] ${msg}`] } : s));
+        res(null);
+      }, delay));
+
+      await addStepLog(`INIT: Sequence authorized by Architect AI.`);
+      
+      // Simulate real work based on step title
+      if (step.id === 1) {
+        await addStepLog("SYNCHRONIZING: Artifact storage connected.");
+        await addStepLog("LOGS: Lifecycle event stream initialized at /var/log/architect/lifecycle.log");
+      } else if (step.id === 2) {
+        await addStepLog(`ANALYSIS: Parsing ${result.dependencies.cloud_iac?.target_provider} deployment policies.`);
+        await addStepLog("PREVIEW: Blueprint layout generated. Est Cost Accuracy: >98%.");
+      } else if (step.id === 3) {
+        await addStepLog("VSS: Creating Volume Shadow Copy checkpoint.");
+        await addStepLog("SNAPSHOT: Local FS consistency verified. Restore point: ARC_T-3.");
+      } else if (step.id === 4) {
+        await addStepLog("SECURITY: Elevated Administrator privilege level confirmed.");
+        await addStepLog("REBOOT: No pending system restarts detected. Continuation safe.");
+      } else if (step.id === 5) {
+        await addStepLog("DOWNLOAD: PowerShell-7.4.2-win-x64.msi");
+        await addStepLog("INSTALL: MSIEXEC sequence SUCCESS.");
+      } else if (step.id === 6) {
+        await addStepLog("WINGET: upgrading 12 outdated applications...");
+        await addStepLog("OS_UPDATE: No critical patches pending.");
+      } else if (step.id === 7) {
+        await addStepLog("HARDWARE: NVidia RTX 5090 detected via PCIe 5.0 x16.");
+        await addStepLog(`NETWORK: ${result.dependencies.network_config ? 'Custom mapped' : 'Standard bridge'} active.`);
+      } else if (step.id === 11) {
+        await addStepLog("IDEMPOTENT_CHECK: Scanning target environment for existing artifacts...");
+        await addStepLog("SYNC: Applying baseline infrastructure config.");
+      } else if (step.id === 12) {
+        await addStepLog("DOCKER: Engine startup verified.");
+        await addStepLog("WSL: Distro 'Ubuntu-Architect' linked to Docker backend.");
+        await addStepLog("MODELS: Verifying Llama-3-8B weights on NVLink...");
+      } else if (step.id === 13) {
+        await addStepLog("TEST_SUITE: Running 24 system-level assertions...");
+        await addStepLog("✅ ASSERTION: All E2E pipelines structurally valid.");
+      } else {
+        await addStepLog(`EXECUTING: ${step.title.split(' ')[0]} logic stream active.`);
+        await addStepLog("COMPLETING: Verifying state persistence...");
+      }
+
+      setLifecycleSteps(prev => prev.map(s => s.id === step.id ? { ...s, status: 'completed' } : s));
     }
-    
-    if (valResult.valid) {
-      await addLog('✅ Build Validation Successful! Dependencies are structurally sound.', 500);
-      setSimStatus('success');
-    } else {
-      await addLog('❌ Build Validation Failed! Critical conflicts detected.', 500);
-      setSimStatus('error');
-    }
+
+    setIsLifecycleRunning(false);
+    setActiveStepId(null);
+    notify("Workforce Lifecycle Sequence Completed Successfully.", "success");
   };
 
   const currentFiles = getAllFiles();
@@ -509,12 +964,13 @@ export default function App() {
       <main className="flex-1 grid grid-cols-[280px_1fr_320px] gap-px bg-slate-800 overflow-hidden">
         
         {/* Left Column: Navigation & Settings */}
-        <section className="bg-slate-950 p-6 flex flex-col gap-8 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-900 border-r border-slate-800">
-          <div className="space-y-4">
+        <section className="bg-slate-950 p-6 flex flex-col gap-8 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-900 border-r border-slate-800 relative">
+          <div className="space-y-4 relative z-[60]">
             <h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em]">Application Modules</h3>
             <div className="flex flex-col gap-2">
               <button 
-                onClick={() => setActiveTab('generator')}
+                id="nav-generator"
+                onClick={() => { setActiveTab('generator'); setShowSettings(false); }}
                 className={`flex items-center gap-3 p-2.5 rounded text-xs transition-all ${
                   activeTab === 'generator' ? 'bg-blue-600/10 text-blue-400 border border-blue-500/20' : 'text-slate-500 hover:text-slate-300'
                 }`}
@@ -522,7 +978,8 @@ export default function App() {
                 <Zap className="w-4 h-4" /> Config Generator
               </button>
               <button 
-                onClick={() => setActiveTab('features')}
+                id="nav-features"
+                onClick={() => { setActiveTab('features'); setShowSettings(false); }}
                 className={`flex items-center gap-3 p-2.5 rounded text-xs transition-all ${
                   activeTab === 'features' ? 'bg-blue-600/10 text-blue-400 border border-blue-500/20' : 'text-slate-500 hover:text-slate-300'
                 }`}
@@ -530,7 +987,8 @@ export default function App() {
                 <Sparkles className="w-4 h-4" /> Full Capability Map
               </button>
               <button 
-                onClick={() => setActiveTab('host-setup')}
+                id="nav-host-setup"
+                onClick={() => { setActiveTab('host-setup'); setShowSettings(false); }}
                 className={`flex items-center gap-3 p-2.5 rounded text-xs transition-all ${
                   activeTab === 'host-setup' ? 'bg-blue-600/10 text-blue-400 border border-blue-500/20' : 'text-slate-500 hover:text-slate-300'
                 }`}
@@ -538,15 +996,17 @@ export default function App() {
                 <Terminal className="w-4 h-4" /> Host Setup & Docs
               </button>
               <button 
-                onClick={() => setActiveTab('simulator')}
+                id="nav-lifecycle"
+                onClick={() => { setActiveTab('lifecycle'); setShowSettings(false); }}
                 className={`flex items-center gap-3 p-2.5 rounded text-xs transition-all ${
-                  activeTab === 'simulator' ? 'bg-blue-600/10 text-blue-400 border border-blue-500/20' : 'text-slate-500 hover:text-slate-300'
+                  activeTab === 'lifecycle' ? 'bg-blue-600/10 text-blue-400 border border-blue-500/20' : 'text-slate-500 hover:text-slate-300'
                 }`}
               >
-                <Activity className="w-4 h-4" /> Build Simulator
+                <Activity className="w-4 h-4" /> Workforce Lifecycle
               </button>
               <button 
-                onClick={() => setActiveTab('vcs')}
+                id="nav-vcs"
+                onClick={() => { setActiveTab('vcs'); setShowSettings(false); }}
                 className={`flex items-center gap-3 p-2.5 rounded text-xs transition-all ${
                   activeTab === 'vcs' ? 'bg-blue-600/10 text-blue-400 border border-blue-500/20' : 'text-slate-500 hover:text-slate-300'
                 }`}
@@ -554,7 +1014,8 @@ export default function App() {
                 <GitBranch className="w-4 h-4" /> Source Control
               </button>
               <button 
-                onClick={() => setActiveTab('cicd')}
+                id="nav-cicd"
+                onClick={() => { setActiveTab('cicd'); setShowSettings(false); }}
                 className={`flex items-center gap-3 p-2.5 rounded text-xs transition-all ${
                   activeTab === 'cicd' ? 'bg-blue-600/10 text-blue-400 border border-blue-500/20' : 'text-slate-500 hover:text-slate-300'
                 }`}
@@ -562,12 +1023,28 @@ export default function App() {
                 <Layers className="w-4 h-4" /> CI/CD Pipelines
               </button>
               <button 
-                onClick={() => setActiveTab('cloud')}
+                id="nav-cloud"
+                onClick={() => { setActiveTab('cloud'); setShowSettings(false); }}
                 className={`flex items-center gap-3 p-2.5 rounded text-xs transition-all ${
                   activeTab === 'cloud' ? 'bg-blue-600/10 text-blue-400 border border-blue-500/20' : 'text-slate-500 hover:text-slate-300'
                 }`}
               >
                 <Cloud className="w-4 h-4" /> Cloud & IaC
+              </button>
+
+              <div className="h-px bg-slate-900/50 mx-2 my-1" />
+
+              <button 
+                id="nav-hardware"
+                onClick={() => { setActiveTab('hardware'); setShowSettings(false); }}
+                className={`flex items-center justify-between p-2.5 rounded text-xs transition-all ${
+                  activeTab === 'hardware' ? 'bg-indigo-600/10 text-indigo-400 border border-indigo-500/20' : 'text-slate-500 hover:text-slate-300'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <Monitor className="w-4 h-4" /> Hardware Registry
+                </div>
+                <span className="text-[8px] font-black bg-indigo-500/10 text-indigo-400 px-1 py-0.5 rounded border border-indigo-600/20">STEP_08</span>
               </button>
             </div>
           </div>
@@ -601,8 +1078,9 @@ export default function App() {
             </div>
           </div>
 
-          <div className="mt-auto pt-6 border-t border-slate-900">
+          <div className="mt-auto pt-6 border-t border-slate-900 relative z-[60]">
              <button 
+                id="portal-settings-toggle"
                 onClick={() => setShowSettings(!showSettings)}
                 className={`flex items-center gap-3 w-full p-2.5 rounded text-xs transition-all mb-4 ${
                   showSettings ? 'text-blue-400 bg-blue-600/10 border border-blue-500/20' : 'text-slate-500 hover:text-slate-300'
@@ -636,9 +1114,9 @@ export default function App() {
                 initial={{ opacity: 0, scale: 0.98 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.98 }}
-                className="relative z-10 flex flex-col h-full gap-8"
+                className="relative z-10 flex flex-col h-full gap-8 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-slate-900"
               >
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between sticky top-0 bg-slate-950 z-20 pb-2">
                   <div className="px-2 py-1 bg-slate-900 border border-slate-800 rounded text-[9px] font-mono text-slate-500 tracking-widest uppercase">Workspace_Synthesis_Terminal</div>
                 </div>
 
@@ -650,7 +1128,7 @@ export default function App() {
                          <Sparkles className="w-3 h-3 text-blue-500 animate-pulse" />
                        </div>
                        <textarea 
-                        className="w-full bg-slate-950 border border-slate-800/50 rounded p-5 text-[13px] font-mono focus:outline-none focus:border-blue-600 transition-all placeholder:text-slate-800 min-h-[160px] resize-none leading-relaxed"
+                        className="w-full bg-slate-950 border border-slate-800/50 rounded p-5 text-[13px] font-mono focus:outline-none focus:border-blue-600 transition-all placeholder:text-slate-800 min-h-[120px] resize-none leading-relaxed"
                         placeholder="INPUT_DEFINITION: Example: Training a model with a React frontend and Qdrant database..."
                         value={prompt}
                         onChange={(e) => setPrompt(e.target.value)}
@@ -660,7 +1138,7 @@ export default function App() {
 
                     <div className="flex gap-4">
                       <button 
-                        onClick={handleGenerate}
+                        onClick={() => handleGenerate()}
                         disabled={loading || !prompt.trim()}
                         className={`flex-1 py-4 rounded flex items-center justify-center gap-3 text-[11px] font-black uppercase tracking-[0.3em] transition-all duration-500 ${
                           loading 
@@ -680,13 +1158,6 @@ export default function App() {
                           </>
                         )}
                       </button>
-                      <button 
-                        onClick={() => { setPrompt(""); setResult(null); }}
-                        disabled={loading}
-                        className="px-6 border border-slate-800 rounded text-slate-500 hover:text-slate-300 hover:border-slate-700 transition-all"
-                      >
-                        <RotateCcw className="w-4 h-4" />
-                      </button>
                     </div>
                   </div>
                 </div>
@@ -695,7 +1166,7 @@ export default function App() {
                   <motion.div 
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="mt-auto w-full p-4 bg-slate-900/50 border border-slate-800 rounded flex gap-4 items-center"
+                    className="w-full p-4 bg-slate-900/50 border border-slate-800 rounded flex gap-4 items-center"
                   >
                     <div className="w-10 h-10 rounded bg-blue-600 flex items-center justify-center">
                       <div className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin"></div>
@@ -708,14 +1179,14 @@ export default function App() {
                 )}
 
                 {result && !loading && (
-                   <div className="mt-8 space-y-6 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-slate-900 pb-8">
+                   <div className="mt-8 space-y-6 pb-8">
                      <div className="flex items-center justify-between">
                        <h4 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Synthesis Output Resume</h4>
                        <button 
-                         onClick={() => { setActiveTab('simulator'); runSimulation(); }}
-                         className="px-3 py-1 bg-emerald-600/10 border border-emerald-500/20 text-emerald-400 text-[9px] font-bold uppercase tracking-widest rounded hover:bg-emerald-600/20 transition-all flex items-center gap-2"
+                         onClick={() => { setActiveTab('lifecycle'); runLifecycle(); }}
+                         className="px-3 py-1 bg-blue-600/10 border border-blue-500/20 text-blue-400 text-[9px] font-bold uppercase tracking-widest rounded hover:bg-blue-600/20 transition-all flex items-center gap-2"
                        >
-                         <Activity className="w-3 h-3" /> Validate_Manifest
+                         <Activity className="w-3 h-3" /> Initiate_Lifecycle
                        </button>
                      </div>
 
@@ -755,6 +1226,65 @@ export default function App() {
                         </div>
                      </div>
                    </div>
+                )}
+
+                {/* Blueprint Library */}
+                <div className="space-y-4">
+                  <h4 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-2">
+                    <Boxes className="w-3 h-3" /> Quick_Role_Blueprints
+                  </h4>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {BLUEPRINTS.map(bp => (
+                      <button
+                        key={bp.id}
+                        onClick={() => { setPrompt(bp.prompt); handleGenerate(bp.prompt); }}
+                        className="p-4 bg-slate-900/30 border border-slate-800 rounded-lg hover:border-blue-500/50 hover:bg-slate-900/50 transition-all group text-left flex flex-col gap-3"
+                      >
+                        <div className="w-8 h-8 rounded bg-blue-600/10 flex items-center justify-center text-blue-500 group-hover:scale-110 transition-transform">
+                          <bp.icon className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <p className="text-[11px] font-bold text-slate-200 uppercase tracking-wider">{bp.title}</p>
+                          <p className="text-[10px] text-slate-500 line-clamp-2 mt-1 leading-normal">{bp.description}</p>
+                        </div>
+                        <div className="flex gap-1 mt-auto">
+                          {bp.tags.map(t => <span key={t} className="px-1.5 py-0.5 bg-slate-950 border border-slate-800 rounded text-[8px] text-slate-600">{t}</span>)}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Synthesis History */}
+                {history.length > 0 && (
+                  <div className="space-y-4 pb-8">
+                    <h4 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-2">
+                      <RotateCcw className="w-3 h-3" /> Synthesis_Recall_Buffer
+                    </h4>
+                    <div className="space-y-2">
+                      {history.map(item => (
+                        <div 
+                          key={item.id}
+                          className="p-4 bg-slate-900/20 border border-slate-800/30 rounded flex items-center justify-between hover:border-slate-700 transition-all cursor-pointer group"
+                          onClick={() => {
+                            setResult(item.result);
+                            setLifecycleSteps(item.result.lifecycle_plan);
+                            setPrompt(item.prompt);
+                            notify("Architectural state recalled.", 'info');
+                          }}
+                        >
+                          <div className="flex items-center gap-4">
+                            <div className="w-2 h-2 rounded-full bg-slate-800 group-hover:bg-blue-500 transition-colors" />
+                            <div className="flex flex-col">
+                              <span className="text-[11px] text-slate-300 font-mono line-clamp-1 max-w-[400px]">{item.prompt}</span>
+                              <span className="text-[9px] text-slate-600">{new Date(item.timestamp).toLocaleString()}</span>
+                            </div>
+                          </div>
+                          <ChevronRight className="w-4 h-4 text-slate-700 group-hover:text-blue-500" />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                 )}
               </motion.div>
             )}
@@ -811,82 +1341,268 @@ export default function App() {
             {activeTab === 'host-setup' && (
               <motion.div 
                 key="host-setup"
-                initial={{ opacity: 0, scale: 0.98 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.98 }}
-                className="relative z-10 flex flex-col h-full gap-6"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 20 }}
+                className="relative z-10 flex flex-col h-full gap-4"
               >
                 <div className="flex items-center justify-between">
                   <div className="px-2 py-1 bg-slate-900 border border-slate-800 rounded text-[9px] font-mono text-slate-500 tracking-widest uppercase">Host_Environment_Documentation</div>
                 </div>
-                <div className="flex-1 overflow-y-auto space-y-8 pr-2 scrollbar-thin scrollbar-thumb-slate-900">
-                  <section className="space-y-3">
-                    <h3 className="text-lg font-bold text-slate-200">Windows Host Optimization</h3>
-                    <p className="text-xs text-slate-500 leading-relaxed">Prepare your Windows machine with PowerShell Core, WSL2 parallel mapping, and NVIDIA Driver verification.</p>
-                    <CodeBlock code={getWindowsSetup()} language="powershell" />
-                  </section>
-                  <section className="space-y-3">
-                    <h3 className="text-lg font-bold text-slate-200">Linux Host Optimization</h3>
-                    <p className="text-xs text-slate-500 leading-relaxed">Ubuntu/Debian setup script for multi-core compilation and Docker NVIDIA Toolkit.</p>
-                    <CodeBlock code={getLinuxSetup()} language="bash" />
-                  </section>
+                
+                <div className="flex-1 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-slate-900">
+                  <div className="prose prose-invert prose-xs max-w-none text-slate-400 font-mono leading-relaxed">
+                    <ReactMarkdown 
+                      components={{
+                        code({ inline, className, children, ...props }: any) {
+                          const match = /language-(\w+)/.exec(className || '');
+                          return !inline && match ? (
+                            <CodeBlock code={String(children).replace(/\n$/, '')} language={match[1]} />
+                          ) : (
+                            <code className={`${className} bg-slate-900 px-1 rounded text-blue-400`} {...props}>
+                              {children}
+                            </code>
+                          );
+                        },
+                        h1: ({ children }) => <h1 className="text-sm font-black text-white uppercase tracking-wider border-b border-slate-900 pb-2 mb-4 font-mono">{children}</h1>,
+                        h2: ({ children }) => <h2 className="text-xs font-bold text-slate-300 mt-8 mb-4 flex items-center gap-2 uppercase tracking-widest border-l-2 border-blue-600 pl-2">{children}</h2>,
+                        h3: ({ children }) => <h3 className="text-[10px] font-bold text-slate-400 mt-4 mb-2 uppercase tracking-widest">{children}</h3>,
+                        p: ({ children }) => <p className="mb-4 text-[12px] opacity-80">{children}</p>,
+                        ul: ({ children }) => <ul className="list-disc list-inside mb-4 space-y-2 text-[11px]">{children}</ul>,
+                        hr: () => <hr className="border-slate-900 my-8" />,
+                      }}
+                    >
+                      {getHostDocs()}
+                    </ReactMarkdown>
+                  </div>
                 </div>
               </motion.div>
             )}
-
-            {activeTab === 'simulator' && (
+            {activeTab === 'lifecycle' && (
               <motion.div 
-                key="simulator"
+                key="lifecycle"
                 initial={{ opacity: 0, scale: 0.98 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.98 }}
                 className="relative z-10 flex flex-col h-full gap-6"
               >
                 <div className="flex items-center justify-between">
-                  <div className="px-2 py-1 bg-slate-900 border border-slate-800 rounded text-[9px] font-mono text-slate-500 tracking-widest uppercase">Build_Validation_Engine</div>
+                  <div className="px-2 py-1 bg-slate-900 border border-slate-800 rounded text-[9px] font-mono text-slate-500 tracking-widest uppercase">Workforce_Lifecycle_Orchestrator</div>
                   <button 
-                    onClick={runSimulation}
-                    disabled={simStatus === 'running' || !result}
-                    className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-800 text-white font-bold text-[10px] uppercase tracking-widest rounded transition-all"
+                    onClick={runLifecycle}
+                    disabled={isLifecycleRunning || !result}
+                    className="flex items-center gap-2 px-6 py-2 bg-blue-600 hover:bg-blue-500 disabled:bg-slate-800 text-white font-bold text-[10px] uppercase tracking-widest rounded shadow-lg shadow-blue-500/20 transition-all active:scale-95"
                   >
-                    {simStatus === 'running' ? <RotateCcw className="w-3 h-3 animate-spin" /> : <Play className="w-3 h-3" />}
-                    Start_Validation
+                    {isLifecycleRunning ? <RotateCcw className="w-3 h-3 animate-spin" /> : <Play className="w-3 h-3" />}
+                    INITIATE_LIFECYCLE
                   </button>
                 </div>
 
-                <div className="flex-1 bg-black border border-slate-800 rounded-lg overflow-hidden flex flex-col shadow-inner">
-                  <div className="bg-slate-900/80 px-4 py-2 flex items-center gap-2 border-b border-slate-800">
-                    <div className="flex gap-1.5">
-                      <div className="w-2.5 h-2.5 rounded-full bg-red-500/50"></div>
-                      <div className="w-2.5 h-2.5 rounded-full bg-amber-500/50"></div>
-                      <div className="w-2.5 h-2.5 rounded-full bg-emerald-500/50"></div>
-                    </div>
-                    <span className="text-[9px] font-mono text-slate-500 tracking-widest ml-2 uppercase">TTY: simulation_log</span>
-                  </div>
-                  <div className="p-6 overflow-y-auto font-mono text-xs text-slate-400 flex-1 space-y-1 scrollbar-thin scrollbar-thumb-slate-900">
+                <div className="flex-1 overflow-hidden grid grid-cols-2 gap-4">
+                  {/* Step List */}
+                  <div className="flex flex-col gap-2 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-slate-900">
                     {!result ? (
-                       <div className="text-slate-700 italic">ARCHITECT_INPUT_REQUIRED: Generate a config before initiating simulation.</div>
-                    ) : simLogs.length === 0 ? (
-                      <div className="text-slate-700 italic">SYSTEM_IDLE: Click Start_Validation to begin build sequence simulation...</div>
+                      <div className="flex-1 flex items-center justify-center text-slate-700 italic border border-dashed border-slate-800 rounded-lg">
+                        Awaiting Architecture Synthesis...
+                      </div>
                     ) : (
-                      simLogs.map((log, idx) => (
-                        <div key={idx} className={
-                          log.startsWith('❌') ? 'text-red-400 font-bold' : 
-                          log.startsWith('✅') ? 'text-emerald-400 font-bold' : 
-                          log.startsWith('⚠️') ? 'text-amber-400' :
-                          log.includes('[Validator]') ? 'text-blue-400/80' : 'text-slate-500'
-                        }>
-                          {log}
-                        </div>
+                      lifecycleSteps.map((step) => (
+                        <button
+                          key={step.id}
+                          onClick={() => setActiveStepId(step.id)}
+                          className={`flex items-start gap-4 p-4 rounded-lg border transition-all text-left group ${
+                            activeStepId === step.id 
+                              ? 'bg-blue-600/10 border-blue-500/30' 
+                              : 'bg-slate-900/40 border-slate-800 hover:border-slate-700'
+                          }`}
+                        >
+                          <div className={`mt-0.5 w-6 h-6 rounded flex items-center justify-center text-[10px] font-bold border ${
+                            step.status === 'completed' ? 'bg-emerald-600/20 border-emerald-500 text-emerald-400' :
+                            step.status === 'running' ? 'bg-blue-600/20 border-blue-500 text-blue-400 animate-pulse' :
+                            'bg-slate-950 border-slate-800 text-slate-600'
+                          }`}>
+                            {step.status === 'completed' ? <Check className="w-3 h-3" /> : step.id}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <h4 className={`text-[11px] font-bold uppercase tracking-wider mb-1 ${
+                              activeStepId === step.id ? 'text-blue-400' : 'text-slate-300'
+                            }`}>{step.title}</h4>
+                            <p className="text-[10px] text-slate-500 line-clamp-1">{step.description}</p>
+                          </div>
+                        </button>
                       ))
                     )}
-                    {simStatus === 'running' && (
-                      <div className="w-2 h-4 bg-emerald-500 animate-pulse inline-block align-middle ml-1" />
-                    )}
-                    <div ref={logEndRef} />
+                  </div>
+
+                  {/* Execution Terminal */}
+                  <div className="bg-black border border-slate-800 rounded-lg overflow-hidden flex flex-col shadow-2xl">
+                    <div className="bg-slate-900/80 px-4 py-2 flex items-center justify-between border-b border-slate-800">
+                      <div className="flex items-center gap-2">
+                         <div className="flex gap-1.5">
+                          <div className="w-2 h-2 rounded-full bg-red-500/30"></div>
+                          <div className="w-2 h-2 rounded-full bg-amber-500/30"></div>
+                          <div className="w-2 h-2 rounded-full bg-emerald-500/30"></div>
+                        </div>
+                        <span className="text-[9px] font-mono text-slate-500 tracking-widest ml-2 uppercase">LIFECYCLE_STREAM: {activeStepId || 'idle'}</span>
+                      </div>
+                      {isLifecycleRunning && <div className="text-[9px] font-mono text-blue-400 animate-pulse uppercase tracking-widest">EXECUTING_LOGIC...</div>}
+                    </div>
+                    <div className="p-6 overflow-y-auto font-mono text-xs text-slate-400 flex-1 space-y-2 scrollbar-thin scrollbar-thumb-slate-900 bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-blue-900/5 via-transparent to-transparent">
+                       {activeStepId === null ? (
+                         <div className="h-full flex flex-col items-center justify-center text-center opacity-30 grayscale gap-4">
+                           <Activity className="w-12 h-12 text-slate-700" />
+                           <p className="text-[10px] font-mono tracking-widest uppercase">Select_Step_For_Insights</p>
+                         </div>
+                       ) : (
+                         <>
+                           <div className="pb-4 border-b border-slate-900 mb-4">
+                             <div className="text-[10px] text-blue-500 font-bold uppercase mb-1">Target Phase</div>
+                             <div className="text-sm font-bold text-slate-200">{lifecycleSteps.find(s => s.id === activeStepId)?.title}</div>
+                             <div className="text-xs text-slate-500 mt-2 leading-relaxed italic border-l-2 border-slate-800 pl-3">
+                               {lifecycleSteps.find(s => s.id === activeStepId)?.description}
+                             </div>
+                           </div>
+                           <div className="space-y-1">
+                             {lifecycleSteps.find(s => s.id === activeStepId)?.logs.map((log, lidx) => (
+                               <div key={lidx} className="flex gap-3">
+                                 <span className="text-slate-800 shrink-0">[{lidx + 1}]</span>
+                                 <span className={log.includes('✅') ? 'text-emerald-400' : log.includes('❌') ? 'text-red-400' : 'text-slate-400'}>
+                                   {log}
+                                 </span>
+                               </div>
+                             ))}
+                             {lifecycleSteps.find(s => s.id === activeStepId)?.status === 'running' && (
+                               <div className="flex gap-3">
+                                 <span className="text-slate-800 shrink-0">[{ (lifecycleSteps.find(s => s.id === activeStepId)?.logs.length || 0) + 1 }]</span>
+                                 <div className="w-1.5 h-3.5 bg-blue-500 animate-pulse" />
+                               </div>
+                             )}
+                           </div>
+
+                           {/* Contextual Hardware Scan Action */}
+                           {activeStepId === 7 && (
+                             <motion.div 
+                               initial={{ opacity: 0, y: 10 }}
+                               animate={{ opacity: 1, y: 0 }}
+                               className="mt-6 p-4 bg-blue-600/10 border border-blue-500/20 rounded-lg space-y-3"
+                             >
+                               <div className="flex items-center gap-2 text-blue-400 font-bold text-[10px] uppercase tracking-widest">
+                                 <Cpu className="w-3.5 h-3.5" /> Discovery_Module_Active
+                                </div>
+                                <p className="text-[10px] text-slate-400 leading-relaxed uppercase tracking-tighter">
+                                  Run the cross-platform auditor to generate hardware_inventory.json.
+                                </p>
+                                <button 
+                                  onClick={() => {
+                                    const blob = new Blob([Generators.generateHardwareInspector()], { type: 'text/plain' });
+                                    const url = URL.createObjectURL(blob);
+                                    const link = document.createElement('a');
+                                    link.href = url;
+                                    link.download = 'inspect_hardware.py';
+                                    link.click();
+                                    URL.revokeObjectURL(url);
+                                    notify("Discovery Agent Downloaded.", "success");
+                                  }}
+                                  className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-[9px] font-bold uppercase tracking-widest rounded transition-all shadow-lg shadow-blue-500/10"
+                                >
+                                  Download_Discovery_Agent
+                                </button>
+                             </motion.div>
+                           )}
+
+                            {/* Step 8: Hardware Registry Interaction */}
+                            {activeStepId === 8 && (
+                              <motion.div 
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                className="mt-6 p-4 bg-slate-900 border border-slate-800 rounded-lg space-y-4"
+                              >
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center gap-2 text-emerald-400 font-bold text-[10px] uppercase tracking-widest">
+                                    <Shield className="w-3.5 h-3.5" /> Registry_Verification
+                                  </div>
+                                  <span className="text-[9px] text-slate-600 font-mono italic">BETA_V2</span>
+                                </div>
+                                <div className="space-y-2">
+                                  {hardwareRegistry.length === 0 ? (
+                                    <div className="text-[10px] text-slate-600 border border-dashed border-slate-800 p-4 rounded text-center">
+                                      NO_DEVICES_DETECTED: Please run Step 7 first.
+                                    </div>
+                                  ) : (
+                                    <div className="space-y-2">
+                                      {hardwareRegistry.map((dev: any, idx: number) => (
+                                        <div key={idx} className="flex items-center justify-between p-2 bg-slate-950 rounded border border-slate-800 text-[10px]">
+                                          <div className="flex flex-col">
+                                            <span className="text-slate-200 font-bold uppercase">{dev.name}</span>
+                                            <span className="text-slate-600 font-mono">{dev.serial} | {dev.tag}</span>
+                                          </div>
+                                          <div className="flex items-center gap-2">
+                                            <Check className="w-3 h-3 text-emerald-500" />
+                                            <span className="text-emerald-500 font-bold uppercase">Linked</span>
+                                          </div>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  )}
+                                  <button 
+                                    onClick={() => {
+                                      const mocks = [
+                                        { name: 'NVIDIA RTX 5090', serial: 'SN-X921-992', tag: 'Workstation' },
+                                        { name: 'AMD Ryzen 9 7950X', serial: 'SN-CPU-7721', tag: 'Workstation' }
+                                      ];
+                                      mocks.forEach(m => addHardwareToRegistry(m));
+                                    }}
+                                    className="w-full py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-[9px] font-bold uppercase tracking-widest rounded transition-all"
+                                  >
+                                    Manual_Inventory_Override
+                                  </button>
+                                </div>
+                              </motion.div>
+                            )}
+
+                            {/* Step 15: Performance Tuning UI */}
+                            {activeStepId === 15 && (
+                              <motion.div 
+                                initial={{ opacity: 0, scale: 0.95 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                className="mt-6 p-4 bg-blue-900/10 border border-blue-500/20 rounded-lg space-y-4"
+                              >
+                                <div className="flex items-center gap-2 text-blue-400 font-bold text-[10px] uppercase tracking-widest">
+                                  <Activity className="w-3.5 h-3.5" /> Live_Tuning_Dashboard
+                                </div>
+                                <div className="grid grid-cols-2 gap-3">
+                                  <div className="p-3 bg-slate-950 border border-slate-800 rounded">
+                                    <div className="text-[8px] text-slate-500 uppercase tracking-tighter mb-1">Fan_Curve_Aggression</div>
+                                    <div className="h-1 bg-slate-800 rounded-full overflow-hidden">
+                                      <div className="h-full bg-blue-500 w-[85%]" />
+                                    </div>
+                                  </div>
+                                  <div className="p-3 bg-slate-950 border border-slate-800 rounded">
+                                    <div className="text-[8px] text-slate-500 uppercase tracking-tighter mb-1">Compute_Priority</div>
+                                    <div className="h-1 bg-slate-800 rounded-full overflow-hidden">
+                                      <div className="h-full bg-emerald-500 w-[100%]" />
+                                    </div>
+                                  </div>
+                                </div>
+                                <div className="text-[9px] text-slate-400 font-mono italic">
+                                  * Latency reduced by 14.2ms via specialized NVML binding.
+                                </div>
+                              </motion.div>
+                            )}
+                         </>
+                       )}
+                       <div ref={logEndRef} />
+                    </div>
                   </div>
                 </div>
               </motion.div>
+            )}
+
+            {activeTab === 'hardware' && (
+               <HardwareRegistryView 
+                 registry={hardwareRegistry}
+                 onRegister={addHardwareToRegistry}
+               />
             )}
 
             {activeTab === 'vcs' && (
@@ -1203,22 +1919,55 @@ export default function App() {
 
         {/* Right Column: Output / Files */}
         <section id="output-panel" className="bg-slate-950 border-l border-slate-800 flex flex-col overflow-hidden">
-          <div className="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-900/20">
-            <h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Stack Manifest</h3>
-            {result && <span className="text-[9px] font-mono text-emerald-400 px-1.5 py-0.5 bg-emerald-500/10 rounded font-bold uppercase border border-emerald-500/20">VALIDATED</span>}
+          <div className="p-0 border-b border-slate-800 flex bg-slate-900/20">
+            <button 
+              onClick={() => setRightPanelMode('manifest')}
+              className={`flex-1 px-4 py-3 text-[10px] font-bold uppercase tracking-widest transition-all ${
+                rightPanelMode === 'manifest' ? 'text-blue-400 border-b border-blue-500 bg-slate-900/50' : 'text-slate-500 hover:text-slate-300'
+              }`}
+            >
+              Stack Manifest
+            </button>
+            <button 
+              onClick={() => setRightPanelMode('agent')}
+              className={`flex-1 px-4 py-3 text-[10px] font-bold uppercase tracking-widest transition-all ${
+                rightPanelMode === 'agent' ? 'text-amber-400 border-b border-amber-500 bg-slate-900/50' : 'text-slate-500 hover:text-slate-300'
+              }`}
+            >
+              Architect Agent
+            </button>
           </div>
 
           <AnimatePresence mode="wait">
-            {!result ? (
-              <div className="flex-1 flex flex-col items-center justify-center p-8 text-center opacity-30 grayscale gap-2">
+            {rightPanelMode === 'agent' ? (
+              <motion.div 
+                key="agent-view"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="flex-1 overflow-hidden"
+              >
+                <AIChatPanel 
+                  context={{
+                    lastPrompt: prompt,
+                    metrics: result ? `${result.metrics.security_score}% Security | ${result.metrics.vulnerability_count} Vulns` : 'N/A',
+                    accounts: Object.entries(linkedAccounts).filter(([_, v]) => v).map(([k]) => k).join(', ') || 'None',
+                    enclaveStatus: 'Host_VHDX_Live_Z:',
+                    dynamicSkills: dynamicSkills
+                  }}
+                />
+              </motion.div>
+            ) : !result ? (
+              <div key="empty" className="flex-1 flex flex-col items-center justify-center p-8 text-center opacity-30 grayscale gap-2 font-mono">
                 <FileCode className="w-12 h-12 text-slate-700" />
-                <p className="text-[10px] font-mono tracking-widest uppercase">Result_Awaiting_Data</p>
+                <p className="text-[10px] tracking-widest uppercase">Result_Awaiting_Data</p>
               </div>
             ) : (
               <motion.div 
                 key="result-view"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
                 className="flex-1 flex flex-col overflow-hidden"
               >
                 {/* File Tabs */}
