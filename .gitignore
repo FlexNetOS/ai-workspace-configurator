@@ -4,3 +4,6 @@ dist-electron
 .DS_Store
 release/package-lock.json
 tsbuildinfo
+coverage
+playwright-report
+test-results
