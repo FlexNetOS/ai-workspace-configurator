@@ -1,0 +1,19 @@
+{
+  "agent_servers": {
+    "Kimi Code CLI": {
+      "type": "custom",
+      "command": "kimi",
+      "args": ["acp"],
+      "env": {}
+    }
+  },
+  "language_models": {
+    "Kimi": {
+      "api_url": "https://api.moonshot.cn/v1",
+      "available_models": [
+        { "name": "kimi-k2-5", "display_name": "Kimi K2.5", "max_tokens": 256000 },
+        { "name": "kimi-k2-5-thinking", "display_name": "Kimi K2.5 Thinking", "max_tokens": 256000 }
+      ]
+    }
+  }
+}

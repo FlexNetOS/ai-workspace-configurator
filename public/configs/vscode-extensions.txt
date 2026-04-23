@@ -1,0 +1,28 @@
+# VS Code Extensions for AI Workspace
+# Install with: cat vscode-extensions.txt | xargs -L1 code --install-extension
+
+# Remote Development
+ms-vscode-remote.remote-wsl
+ms-vscode-remote.remote-containers
+ms-vscode-remote.remote-ssh
+
+# AI / Copilot
+github.copilot
+github.copilot-chat
+
+# Python
+ms-python.python
+ms-python.debugpy
+ms-python.black-formatter
+
+# Docker
+ms-azuretools.vscode-docker
+
+# Rust
+dustypomerleau.rust-syntax
+
+# General
+ms-vscode.powershell
+redhat.vscode-yaml
+davidanson.vscode-markdownlint
+dbaeumer.vscode-eslint

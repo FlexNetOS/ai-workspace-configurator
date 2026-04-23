@@ -1,0 +1,52 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release (e.g., v3.6.0)'
+        required: true
+        default: 'v3.6.0'
+
+jobs:
+  build-and-release:
+    runs-on: windows-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies (web app)
+        run: npm ci
+
+      - name: Build web app
+        run: npm run build
+
+      - name: Install dependencies (electron)
+        working-directory: ./release
+        run: npm ci
+
+      - name: Build Electron app
+        working-directory: ./release
+        run: npx electron-builder --win --publish=never
+
+      - name: Upload artifacts to release
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
+        with:
+          files: |
+            dist-electron/*.exe
+            dist-electron/*.zip
+          draft: false
+          prerelease: false
+          generate_release_notes: true

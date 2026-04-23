@@ -1,0 +1,16 @@
+# Kimi Code CLI Configuration
+# Place at ~/.kimi/config.toml (inside WSL)
+
+default_model = "kimi-k2-5"
+default_thinking = true
+auto_update = true
+shell_integration = true
+
+[api]
+base_url = "https://api.moonshot.cn/v1"
+timeout = 120
+
+[display]
+theme = "dark
+verbose = false
+show_token_usage = true

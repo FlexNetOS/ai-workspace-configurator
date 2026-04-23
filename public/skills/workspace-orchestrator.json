@@ -1,0 +1,140 @@
+{
+  "name": "workspace-orchestrator",
+  "version": "3.0.0",
+  "description": "AI Workspace Configurator's built-in orchestrator. Guides users through 15-step setup, answers questions, and triggers app actions.",
+  "capabilities": [
+    {
+      "id": "wizard-guide",
+      "name": "Wizard Navigation Guide",
+      "description": "Explain any of the 15 setup steps in plain English. Help users understand what each step does and why it matters.",
+      "triggers": [
+        "explain step {n}",
+        "what does step {n} do",
+        "why do I need {component}",
+        "what is {component}"
+      ],
+      "context": {
+        "requires": ["currentStep", "completedSteps"],
+        "provides": ["stepExplanation", "whyItMatters", "timeEstimate", "prerequisites"]
+      }
+    },
+    {
+      "id": "troubleshoot",
+      "name": "Setup Troubleshooter",
+      "description": "Diagnose common issues at each step and provide guided fixes. Has access to remediation database.",
+      "triggers": [
+        "stuck at step {n}",
+        "error at {component}",
+        "{component} failed",
+        "help me fix"
+      ],
+      "context": {
+        "requires": ["currentStep", "terminalLogs", "securityChecks", "e2eTests"],
+        "provides": ["diagnosis", "fixSteps", "escalationPath"]
+      }
+    },
+    {
+      "id": "action-trigger",
+      "name": "App Action Trigger",
+      "description": "Trigger actions in the app via natural language. Navigate steps, run checks, reset state, open settings.",
+      "triggers": [
+        "go to step {n}",
+        "run the check",
+        "open settings",
+        "show logs",
+        "reset my progress",
+        "skip this step"
+      ],
+      "actions": [
+        "navigate:toStep",
+        "wizard:runStep",
+        "wizard:skipStep",
+        "wizard:reset",
+        "app:openSettings",
+        "app:openLogs",
+        "app:openHelp"
+      ]
+    },
+    {
+      "id": "explain-tech",
+      "name": "Technology Explainer",
+      "description": "Explain technical concepts (WSL2, Docker, VHDX, GPU passthrough, etc.) in plain English for non-technical users.",
+      "triggers": [
+        "what is {term}",
+        "explain {term}",
+        "do I need {term}",
+        "why {term}"
+      ],
+      "glossary": [
+        "WSL2", "Docker", "VHDX", "Virtualization", "GPU Passthrough",
+        "winget", "PowerShell", "Zsh", "llama.cpp", "GGUF",
+        "Container", "Distro", "Kernel", "Hyper-V", "UEFI"
+      ]
+    },
+    {
+      "id": "provider-advisor",
+      "name": "Provider & Account Advisor",
+      "description": "Recommend which providers to connect based on user's goals. Explain what each account (Docker, GitHub, etc.) is used for.",
+      "triggers": [
+        "which accounts do I need",
+        "should I connect {provider}",
+        "what is {provider} for",
+        "do I need all accounts"
+      ],
+      "context": {
+        "requires": ["linkedAccounts", "selectedProviders"],
+        "provides": ["recommendations", "accountPurpose", "minimumRequired"]
+      }
+    },
+    {
+      "id": "progress-tracker",
+      "name": "Progress & Time Estimator",
+      "description": "Report setup progress, estimate time remaining, and suggest what to do next.",
+      "triggers": [
+        "how much longer",
+        "what is my progress",
+        "what should I do next",
+        "am I almost done"
+      ],
+      "context": {
+        "requires": ["currentStep", "completedSteps", "isExecuting"],
+        "provides": ["percentComplete", "timeEstimate", "nextAction"]
+      }
+    },
+    {
+      "id": "security-advisor",
+      "name": "Security & Best Practices",
+      "description": "Answer security questions. Explain what the app does to keep the system safe, what data is stored where.",
+      "triggers": [
+        "is this safe",
+        "will this delete my files",
+        "what data is collected",
+        "can I undo changes",
+        "privacy"
+      ],
+      "context": {
+        "requires": ["checkpoints"],
+        "provides": ["safetyExplanation", "rollbackInfo", "dataPolicy"]
+      }
+    }
+  ],
+  "persona": {
+    "name": "Claw",
+    "role": "AI Workspace Assistant",
+    "tone": "friendly, patient, encouraging, plain-English",
+    "style": "Never use jargon without explaining it. Always offer to clarify. Celebrate progress. Be honest about limitations.",
+    "greeting": "Hi! I'm Claw, your workspace setup assistant. I can explain steps, help fix issues, or just chat about the setup. What would you like to know?"
+  },
+  "memory": {
+    "shortTerm": {
+      "description": "Current conversation thread + visible app state",
+      "ttl": "session",
+      "fields": ["messages", "currentStep", "lastTopic"]
+    },
+    "longTerm": {
+      "description": "User preferences, past issues, completed steps across sessions",
+      "ttl": "persistent",
+      "fields": ["userName", "preferredIDE", "completedSetupOnce", "commonIssues", "chatHistory"]
+    }
+  }
+}
