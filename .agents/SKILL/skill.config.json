@@ -1,16 +1,45 @@
 {
-  "name": "changelog-skill",
-  "version": "1.0.0",
-  "entrypoint": "SKILL.md",
-  "slashCommands": [
+  "skills": [
     {
-      "name": "/changelog-sync",
-      "description": "Sync .changelog files from current implementation diff and create/update release audit note",
-      "doc": "slash-commands/changelog-sync.md"
+      "name": "changelog-skill",
+      "version": "1.0.0",
+      "entrypoint": "SKILL.md",
+      "slashCommands": [
+        {
+          "name": "/changelog-sync",
+          "description": "Sync .changelog files from current implementation diff and create/update release audit note",
+          "doc": "slash-commands/changelog-sync.md"
+        }
+      ],
+      "hooks": {
+        "preflight": "hooks/preflight.ps1",
+        "postupdate": "hooks/postupdate.ps1"
+      }
+    },
+    {
+      "name": "component-dev-skill",
+      "version": "1.0.0",
+      "entrypoint": "component-dev/SKILL.md"
+    },
+    {
+      "name": "hook-dev-skill",
+      "version": "1.0.0",
+      "entrypoint": "hook-dev/SKILL.md"
+    },
+    {
+      "name": "state-management-skill",
+      "version": "1.0.0",
+      "entrypoint": "state-management/SKILL.md"
+    },
+    {
+      "name": "testing-skill",
+      "version": "1.0.0",
+      "entrypoint": "testing/SKILL.md"
+    },
+    {
+      "name": "release-skill",
+      "version": "1.0.0",
+      "entrypoint": "release/SKILL.md"
     }
-  ],
-  "hooks": {
-    "preflight": "hooks/preflight.ps1",
-    "postupdate": "hooks/postupdate.ps1"
-  }
+  ]
 }

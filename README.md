@@ -2,6 +2,9 @@
 
 Desktop setup assistant for Windows-first AI development environments.
 
+## APP Purpose & Desired Output
+- 
+
 ## Stack
 - Frontend: React + TypeScript + Vite
 - Desktop packaging: Electron + electron-builder
@@ -9,6 +12,14 @@ Desktop setup assistant for Windows-first AI development environments.
 - Shell standard: PowerShell 7+
 
 ## Local Development
+
+### Quick Start (Recommended)
+```powershell
+pwsh scripts/setup-dev.ps1
+```
+This script verifies prerequisites, fixes PATH, bootstraps `.env`, installs dependencies, and runs a smoke build.
+
+### Manual Setup
 ```powershell
 npm ci
 npm run dev
