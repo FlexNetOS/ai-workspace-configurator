@@ -13,8 +13,7 @@
     "build:portable": "electron-builder --win portable --publish=never",
     "dist": "npm run build:react && electron-builder --win --publish=never",
     "dist:all": "npm run build:react && electron-builder --win --mac --linux --publish=never",
-    "pack": "electron-builder --dir",
-    "postinstall": "electron-builder install-app-deps"
+    "pack": "electron-builder --dir"
   },
   "build": {
     "appId": "com.aiworkspace.configurator",
