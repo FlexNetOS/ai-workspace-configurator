@@ -26,20 +26,26 @@ jobs:
           node-version: '20'
           cache: 'npm'
 
-      - name: Install dependencies (web app)
+      # ─── Build web app ───
+      - name: Install web app dependencies
         run: npm ci
 
       - name: Build web app
         run: npm run build
 
-      - name: Install dependencies (electron)
+      # ─── Build Electron app ───
+      # Note: release/package-lock.json is a stub. We use npm install --ignore-scripts
+      # to avoid running electron-builder install-app-deps (which needs electron-builder
+      # to be already installed, a chicken-and-egg problem).
+      - name: Install Electron dependencies
         working-directory: ./release
-        run: npm ci
+        run: npm install --ignore-scripts
 
       - name: Build Electron app
         working-directory: ./release
         run: npx electron-builder --win --publish=never
 
+      # ─── Upload to GitHub Release ───
       - name: Upload artifacts to release
         uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
