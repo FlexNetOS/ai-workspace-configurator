@@ -62,21 +62,37 @@ Write-Host "      Syncing companion scripts..." -ForegroundColor Gray
 $companionScripts = @("SecurityCheck.ps1", "HardwareScan.ps1", "VhdxManager.ps1", "InstallStack.ps1")
 foreach ($name in $companionScripts) {
     $dest = Join-Path "$WorkspaceDir\scripts" $name
-    if (Test-Path $dest) { continue }
+    $tmp = "$dest.tmp"
 
     $local = if ($PSScriptRoot) { Join-Path $PSScriptRoot $name } else { $null }
     if ($local -and (Test-Path $local)) {
-        Copy-Item -Path $local -Destination $dest -Force
-        Unblock-File -Path $dest -ErrorAction SilentlyContinue
+        Copy-Item -Path $local -Destination $tmp -Force
+        if ((Test-Path $tmp) -and ((Get-Item $tmp).Length -gt 0)) {
+            Move-Item -Path $tmp -Destination $dest -Force
+            Unblock-File -Path $dest -ErrorAction SilentlyContinue
+        } else {
+            Remove-Item -Path $tmp -Force -ErrorAction SilentlyContinue
+        }
         continue
     }
 
     $url = "$ScriptsBaseUrl/$name"
     try {
-        Invoke-WebRequest -Uri $url -OutFile $dest -MaximumRedirection 10
-        Unblock-File -Path $dest -ErrorAction SilentlyContinue
+        Invoke-WebRequest -Uri $url -OutFile $tmp -MaximumRedirection 10
+        if ((Test-Path $tmp) -and ((Get-Item $tmp).Length -gt 0)) {
+            Move-Item -Path $tmp -Destination $dest -Force
+            Unblock-File -Path $dest -ErrorAction SilentlyContinue
+        } else {
+            Remove-Item -Path $tmp -Force -ErrorAction SilentlyContinue
+            if (-not (Test-Path $dest)) {
+                Write-Host "      Warning: Failed to fetch $name from $url" -ForegroundColor Yellow
+            }
+        }
     } catch {
-        Write-Host "      Warning: Failed to fetch $name from $url" -ForegroundColor Yellow
+        Remove-Item -Path $tmp -Force -ErrorAction SilentlyContinue
+        if (-not (Test-Path $dest)) {
+            Write-Host "      Warning: Failed to fetch $name from $url" -ForegroundColor Yellow
+        }
     }
 }
 
@@ -150,7 +166,7 @@ $installScript = "$WorkspaceDir\scripts\InstallStack.ps1"
 if ($Mode -notin @("Full", "InstallOnly")) {
     # Already reported as skipped above.
 } elseif (Test-Path $installScript) {
-    & $installScript -Phase All -Verbose
+    & $installScript -Phase All -WorkspaceDir $WorkspaceDir -Verbose
 } else {
     Write-Host "      Install script not found. Skipping." -ForegroundColor Yellow
 }

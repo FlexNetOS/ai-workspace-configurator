@@ -17,13 +17,16 @@ param(
     [string]$Phase = "All",
     [string]$DistroName = "Ubuntu",
     [string]$WslUsername = $env:USERNAME,
+    [string]$WorkspaceDir = "$env:USERPROFILE\.ai-workspace",
     [switch]$SkipRebootCheck,
     [switch]$Verbose
 )
 
 $ErrorActionPreference = "Stop"
 $ProgressPreference = "Continue"
-$script:LogFile = "$env:USERPROFILE\.ai-workspace\logs\install-stack.log"
+$script:LogFile = Join-Path $WorkspaceDir "logs\\install-stack.log"
+$logDir = Split-Path -Parent $script:LogFile
+if (-not (Test-Path $logDir)) { New-Item -ItemType Directory -Path $logDir -Force | Out-Null }
 
 function Write-Log {
     param([string]$Message, [string]$Level = "INFO")
@@ -84,22 +87,23 @@ function Install-WingetPackages {
         @{ id = "Microsoft.WindowsTerminal"; name = "Windows Terminal" },
         @{ id = "Git.Git"; name = "Git" },
         @{ id = "GitHub.cli"; name = "GitHub CLI" },
-        @{ id = "Docker.DockerDesktop"; name = "Docker Desktop" },
         @{ id = "VideoLAN.VLC"; name = "VLC (media)" },
         @{ id = "7zip.7zip"; name = "7-Zip" }
     )
 
     foreach ($pkg in $packages) {
         Write-Log "Installing $($pkg.name)..."
-        try {
-            $result = winget install --id $pkg.id --silent --accept-package-agreements --accept-source-agreements 2>&1
-            if ($result -match "already installed|Already installed") {
-                Write-Log "$($pkg.name) already installed" "OK"
-            } else {
-                Write-Log "$($pkg.name) installed" "OK"
-            }
-        } catch {
-            Write-Log "Failed to install $($pkg.name): $_" "WARN"
+        $result = winget install --id $pkg.id --silent --accept-package-agreements --accept-source-agreements 2>&1
+        $exit = $LASTEXITCODE
+        if ($exit -ne 0) {
+            Write-Log "Failed to install $($pkg.name) (winget exit=$exit): $result" "WARN"
+            continue
+        }
+
+        if ($result -match "already installed|Already installed") {
+            Write-Log "$($pkg.name) already installed" "OK"
+        } else {
+            Write-Log "$($pkg.name) installed" "OK"
         }
     }
 }
@@ -112,19 +116,55 @@ function Install-DockerDesktop {
         return
     }
 
-    $dockerPath = "${env:ProgramFiles}\Docker\Docker\Docker Desktop.exe"
-    if (Test-Path $dockerPath) {
+    $dockerPaths = @(
+        (Join-Path $env:ProgramFiles "Docker\\Docker\\Docker Desktop.exe"),
+        (Join-Path $env:LocalAppData "Programs\\Docker\\Docker\\Docker Desktop.exe")
+    )
+    $dockerPath = $dockerPaths | Where-Object { Test-Path $_ } | Select-Object -First 1
+
+    if ($dockerPath) {
         Write-Log "Docker Desktop found, starting..."
-        Start-Process $dockerPath
-        Write-Log "Docker Desktop started" "OK"
+        try {
+            Start-Process -FilePath $dockerPath -WorkingDirectory (Split-Path -Parent $dockerPath) -ErrorAction Stop
+            Write-Log "Docker Desktop started" "OK"
+        } catch {
+            Write-Log "Docker Desktop found but could not start: $_" "WARN"
+        }
         return
     }
 
     Write-Log "Installing Docker Desktop via winget..."
-    winget install Docker.DockerDesktop --silent --accept-package-agreements
+
+    # If ProgramData ownership is wrong, Docker Desktop installs can fail. Best-effort fix.
+    $pd = "C:\\ProgramData\\DockerDesktop"
+    if (Test-Path $pd) {
+        try {
+            & icacls $pd /setowner "BUILTIN\\Administrators" /T /C | Out-Null
+        } catch {
+            Write-Log "Could not adjust ownership for $pd: $_" "WARN"
+        }
+    }
+
+    $result = winget install --id Docker.DockerDesktop --silent --accept-package-agreements --accept-source-agreements 2>&1
+    $exit = $LASTEXITCODE
+    if ($exit -ne 0) {
+        Write-Log "Docker Desktop winget install failed (exit=$exit): $result" "WARN"
+        return
+    }
+
+    $dockerPath = $dockerPaths | Where-Object { Test-Path $_ } | Select-Object -First 1
+    if (-not $dockerPath) {
+        Write-Log "Docker Desktop install completed but executable was not found in expected locations." "WARN"
+        return
+    }
+
     Write-Log "Docker Desktop installed. Starting..."
-    Start-Process "${env:ProgramFiles}\Docker\Docker\Docker Desktop.exe" -ErrorAction SilentlyContinue
-    Write-Log "Docker Desktop installed" "OK"
+    try {
+        Start-Process -FilePath $dockerPath -WorkingDirectory (Split-Path -Parent $dockerPath) -ErrorAction Stop
+        Write-Log "Docker Desktop installed and started" "OK"
+    } catch {
+        Write-Log "Docker Desktop installed but could not start: $_" "WARN"
+    }
 }
 
 function Install-WSL {

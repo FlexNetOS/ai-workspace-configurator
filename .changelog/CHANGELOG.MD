@@ -39,6 +39,8 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and ver
 - Fixed default VHDX/WSL directory behavior so choosing a workspace drive (e.g. `F:\`) keeps state under that workspace instead of creating `C:\Users\<user>\WSL` by default.
 - Fixed bootstrap to skip restore point creation in Preflight (`CheckOnly`) and to block Full/InstallOnly runs until prerequisites (WSL, updates, reboot) are satisfied.
 - Fixed SecurityCheck to detect WSL install state via `wsl.exe` so WSL2 Store-based installs don’t show a false “not installed” result.
+- Fixed bootstrap companion script syncing to refresh existing scripts so older cached copies under the workspace don’t keep reintroducing fixed bugs.
+- Fixed Docker Desktop install flow to honor winget exit codes, verify the installed executable before starting, and write `install-stack.log` under the selected workspace directory.
 
 ### Removed
 - Removed dependency on `release/package-lock.json` and release-local `npm install` flow.
