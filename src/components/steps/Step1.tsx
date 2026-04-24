@@ -1,12 +1,24 @@
 import { motion } from 'framer-motion';
 import {
   Shield, Terminal as TerminalIcon, Zap, Cpu, Link2, Sparkles, Download,
+  Globe, Compass, Flame, Radio, Satellite, Rocket,
 } from 'lucide-react';
+import useWizardStore from '@/store/wizardStore';
 import AutoDiscoveryPanel from '@/components/AutoDiscoveryPanel';
 import ScriptPanel from '@/components/ScriptPanel';
 import { containerVariants, cardVariants } from './variants';
 
+const browserOptions = [
+  { id: 'chrome', name: 'Chrome', icon: <Globe className="w-5 h-5 text-[#4285F4]" /> },
+  { id: 'edge', name: 'Edge', icon: <Compass className="w-5 h-5 text-[#0078D7]" /> },
+  { id: 'firefox', name: 'Firefox', icon: <Flame className="w-5 h-5 text-[#FF7139]" /> },
+  { id: 'chromium', name: 'Chromium', icon: <Radio className="w-5 h-5 text-[#4C8BF5]" /> },
+  { id: 'safari', name: 'Safari', icon: <Satellite className="w-5 h-5 text-[#00D8FF]" /> },
+  { id: 'comet', name: 'Comet', icon: <Rocket className="w-5 h-5 text-[#8B5CF6]" /> },
+];
+
 export default function Step1() {
+  const { preferredBrowser, setPreferredBrowser } = useWizardStore();
   return (
     <motion.div variants={containerVariants} initial="initial" animate="animate" className="space-y-6">
       <motion.div variants={cardVariants} className="rounded-2xl border border-[rgba(255,255,255,0.06)] bg-[#0B1120] overflow-hidden">
@@ -53,6 +65,47 @@ export default function Step1() {
                 {f.icon}
                 <span className="text-[12px] text-[#94A3B8] leading-[1.4]">{f.text}</span>
               </motion.div>
+            ))}
+          </div>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          className="mt-5 p-5 rounded-2xl border border-[rgba(255,255,255,0.06)] bg-[#0B1120]"
+        >
+          <h3 className="text-[15px] font-semibold text-[#F0F4F8] mb-1 flex items-center gap-2">
+            <Globe className="w-4 h-4 text-[#3B82F6]" />
+            Preferred Browser
+          </h3>
+          <p className="text-[12px] text-[#64748B] mb-4">
+            Select the browser you want to use for OAuth logins and web-based setup steps.
+          </p>
+          <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+            {browserOptions.map((b) => (
+              <motion.button
+                key={b.id}
+                onClick={() => setPreferredBrowser(b.id)}
+                className={`flex flex-col items-center gap-1.5 p-3 rounded-xl border transition-all ${
+                  preferredBrowser === b.id
+                    ? 'border-[rgba(37,99,235,0.4)] bg-[rgba(37,99,235,0.08)]'
+                    : 'border-[rgba(255,255,255,0.06)] bg-[rgba(255,255,255,0.02)] hover:border-[rgba(255,255,255,0.12)]'
+                }`}
+                whileHover={{ y: -2 }}
+                whileTap={{ scale: 0.97 }}
+              >
+                {b.icon}
+                <span className="text-[11px] font-medium text-[#94A3B8]">{b.name}</span>
+                {preferredBrowser === b.id && (
+                  <motion.div
+                    layoutId="browserCheck"
+                    className="w-4 h-4 rounded-full bg-[#2563EB] flex items-center justify-center"
+                  >
+                    <Sparkles className="w-2.5 h-2.5 text-white" />
+                  </motion.div>
+                )}
+              </motion.button>
             ))}
           </div>
         </motion.div>
