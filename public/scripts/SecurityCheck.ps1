@@ -15,7 +15,6 @@ param(
 )
 
 $ErrorActionPreference = "Continue"
-$results = @{}
 $allPassed = $true
 
 function Test-AdminRights {
@@ -71,10 +70,10 @@ function Test-WindowsUpdate {
         $searcher = $session.CreateUpdateSearcher()
         $pending = $searcher.Search("IsInstalled=0")
         $count = $pending.Updates.Count
-        return @{ passed = ($count -eq 0); value = "$count updates pending"; severity = "info";
+        return @{ passed = ($count -eq 0); value = "$count updates pending"; severity = "warning";
                   remediation = if ($count -gt 0) { "Run: Start-Process ms-settings:windowsupdate-action" } else { "" } }
     } catch {
-        return @{ passed = $false; value = "Unable to check"; severity = "info"; remediation = "Check Windows Update manually" }
+        return @{ passed = $false; value = "Unable to check"; severity = "warning"; remediation = "Check Windows Update manually" }
     }
 }
 
@@ -106,6 +105,26 @@ function Test-WSLInstalled {
               remediation = "wsl --install (will require restart)" }
 }
 
+function Test-WSLReady {
+    try {
+        & wsl.exe --status *>$null
+        $ok = ($LASTEXITCODE -eq 0)
+        return @{
+            passed = $ok
+            value = if ($ok) { "Ready" } else { "Not ready" }
+            severity = "critical"
+            remediation = "Run: wsl --install --no-distribution (may require restart)"
+        }
+    } catch {
+        return @{
+            passed = $false
+            value = "wsl.exe not usable"
+            severity = "critical"
+            remediation = "Run: wsl --install --no-distribution (may require restart)"
+        }
+    }
+}
+
 # ─── Run Checks ───
 Write-Host "Running Security & Readiness Checks..." -ForegroundColor Cyan
 
@@ -117,6 +136,7 @@ $checks = @{
     rebootPending = Test-RebootPending
     secureBoot = Test-SecureBoot
     wslInstalled = Test-WSLInstalled
+    wslReady = Test-WSLReady
 }
 
 foreach ($name in $checks.Keys) {
@@ -133,26 +153,78 @@ foreach ($name in $checks.Keys) {
 # Auto-fix if requested
 if ($Fix) {
     Write-Host "`nApplying automatic fixes..." -ForegroundColor Cyan
-    if (-not $checks.virtualization.passed) {
-        $vmFeature = Get-WindowsOptionalFeature -Online -FeatureName VirtualMachinePlatform
-        if ($vmFeature.State -ne "Enabled") {
-            Enable-WindowsOptionalFeature -Online -FeatureName VirtualMachinePlatform -NoRestart -All
-            Write-Host "  [FIXED] Enabled VirtualMachinePlatform" -ForegroundColor Green
+
+    # Ensure required Windows features are enabled (no reboot triggered automatically).
+    $vmFeature = Get-WindowsOptionalFeature -Online -FeatureName VirtualMachinePlatform -ErrorAction SilentlyContinue
+    if ($vmFeature -and $vmFeature.State -ne "Enabled") {
+        Enable-WindowsOptionalFeature -Online -FeatureName VirtualMachinePlatform -NoRestart -All | Out-Null
+        Write-Host "  [FIXED] Enabled VirtualMachinePlatform" -ForegroundColor Green
+    }
+
+    $wslFeature = Get-WindowsOptionalFeature -Online -FeatureName Microsoft-Windows-Subsystem-Linux -ErrorAction SilentlyContinue
+    if ($wslFeature -and $wslFeature.State -ne "Enabled") {
+        Enable-WindowsOptionalFeature -Online -FeatureName Microsoft-Windows-Subsystem-Linux -NoRestart -All | Out-Null
+        Write-Host "  [FIXED] Enabled Microsoft-Windows-Subsystem-Linux" -ForegroundColor Green
+    }
+
+    # Use the supported WSL installer to fetch the kernel/store components (no distro here).
+    if (-not $checks.wslReady.passed) {
+        try {
+            & wsl.exe --install --no-distribution | Out-Null
+            Write-Host "  [FIX] Ran: wsl --install --no-distribution" -ForegroundColor Green
+        } catch {
+            Write-Host "  [WARN] Could not run: wsl --install --no-distribution" -ForegroundColor Yellow
         }
-        $wslFeature = Get-WindowsOptionalFeature -Online -FeatureName Microsoft-Windows-Subsystem-Linux
-        if ($wslFeature.State -ne "Enabled") {
-            Enable-WindowsOptionalFeature -Online -FeatureName Microsoft-Windows-Subsystem-Linux -NoRestart -All
-            Write-Host "  [FIXED] Enabled WSL" -ForegroundColor Green
+    }
+
+    if (-not $checks.windowsUpdate.passed) {
+        try {
+            Start-Process ms-settings:windowsupdate-action | Out-Null
+            Write-Host "  [FIX] Opened Windows Update settings" -ForegroundColor Green
+        } catch {
+            Write-Host "  [WARN] Could not open Windows Update settings" -ForegroundColor Yellow
         }
     }
 }
 
+# Ready-to-install means: no critical failures, no pending reboot, and no pending updates.
+$readyToInstall = $true
+foreach ($name in $checks.Keys) {
+    $c = $checks[$name]
+    if (-not $c.passed -and $c.severity -eq "critical") { $readyToInstall = $false }
+}
+if (-not $checks.windowsUpdate.passed) { $readyToInstall = $false }
+if (-not $checks.rebootPending.passed) { $readyToInstall = $false }
+if (-not $checks.wslReady.passed) { $readyToInstall = $false }
+
 # Save report
-$report = @{ timestamp = (Get-Date -Format "o"); allPassed = $allPassed; checks = $checks }
+$failed = @()
+foreach ($name in $checks.Keys) {
+    $c = $checks[$name]
+    if (-not $c.passed) {
+        $failed += @{
+            name = $name
+            severity = $c.severity
+            value = $c.value
+            remediation = $c.remediation
+        }
+    }
+}
+
+$report = @{
+    timestamp = (Get-Date -Format "o")
+    allPassed = $allPassed
+    readyToInstall = $readyToInstall
+    failed = $failed
+    checks = $checks
+}
 $dir = Split-Path $OutputPath -Parent
 if (-not (Test-Path $dir)) { New-Item -ItemType Directory -Path $dir -Force | Out-Null }
 $report | ConvertTo-Json -Depth 5 | Out-File $OutputPath -Encoding UTF8
 
 Write-Host "`nReport saved to: $OutputPath" -ForegroundColor Cyan
-if ($allPassed) { Write-Host "All critical checks passed! Ready to proceed." -ForegroundColor Green }
-else { Write-Host "Some checks failed. Review the report above." -ForegroundColor Yellow }
+if ($readyToInstall) {
+    Write-Host "Preflight is clean. Ready to proceed." -ForegroundColor Green
+} else {
+    Write-Host "Preflight found blockers. Review the report above." -ForegroundColor Yellow
+}

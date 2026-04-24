@@ -20,7 +20,8 @@ param(
     [switch]$NonInteractive,
     [string]$WorkspaceDir = "$env:USERPROFILE\.ai-workspace",
     [string]$VhdxPath = "$env:USERPROFILE\WSL\workspace.vhdx",
-    [int]$VhdxSizeGB = 100
+    [int]$VhdxSizeGB = 100,
+    [switch]$FixPrereqs
 )
 
 $ErrorActionPreference = "Stop"
@@ -81,22 +82,47 @@ foreach ($name in $companionScripts) {
 # ─── Step 1: Security Check ───
 Write-Host "`n[1/5] Running security & readiness checks..." -ForegroundColor Cyan
 $secScript = "$WorkspaceDir\scripts\SecurityCheck.ps1"
-if ($Mode -notin @("Full", "CheckOnly")) {
+if ($Mode -notin @("Full", "CheckOnly", "InstallOnly")) {
     Write-Host "      Skipping (Mode=$Mode)" -ForegroundColor Gray
 } elseif (Test-Path $secScript) {
-    & $secScript -OutputPath "$WorkspaceDir\artifacts\security-report.json"
+    $secOut = "$WorkspaceDir\artifacts\security-report.json"
+    $shouldFix = $FixPrereqs -or ($Mode -in @("Full", "InstallOnly"))
+    if ($Mode -eq "CheckOnly") { $shouldFix = $false }
+
+    if ($shouldFix) {
+        & $secScript -OutputPath $secOut -Fix
+    } else {
+        & $secScript -OutputPath $secOut
+    }
+
+    if (Test-Path $secOut) {
+        try {
+            $secReport = Get-Content $secOut -Raw | ConvertFrom-Json
+            if ($Mode -in @("Full", "InstallOnly") -and (-not $secReport.readyToInstall)) {
+                Write-Host "`nBlocking issues detected. Resolve items in the security report, reboot if required, then re-run bootstrap." -ForegroundColor Yellow
+                throw "Preflight blockers detected. See: $secOut"
+            }
+        } catch {
+            Write-Host "      Warning: Could not parse $secOut" -ForegroundColor Yellow
+        }
+    }
 } else {
     Write-Host "      Security script not found. Skipping." -ForegroundColor Yellow
 }
 
 # ─── Step 2: Create Restore Point ───
-Write-Host "`n[2/5] Creating system restore point..." -ForegroundColor Cyan
-try {
-    Checkpoint-Computer -Description "AI-Workspace-Setup-$(Get-Date -Format 'yyyyMMdd-HHmm')" `
-        -RestorePointType "MODIFY_SETTINGS" -ErrorAction Stop
-    Write-Host "      Restore point created" -ForegroundColor Green
-} catch {
-    Write-Host "      Could not create restore point (System Protection may be disabled)" -ForegroundColor Yellow
+if ($Mode -in @("Full", "InstallOnly")) {
+    Write-Host "`n[2/5] Creating system restore point..." -ForegroundColor Cyan
+    try {
+        Checkpoint-Computer -Description "AI-Workspace-Setup-$(Get-Date -Format 'yyyyMMdd-HHmm')" `
+            -RestorePointType "MODIFY_SETTINGS" -ErrorAction Stop
+        Write-Host "      Restore point created" -ForegroundColor Green
+    } catch {
+        Write-Host "      Could not create restore point (System Protection may be disabled or frequency limited)" -ForegroundColor Yellow
+    }
+} else {
+    Write-Host "`n[2/5] Creating system restore point..." -ForegroundColor Cyan
+    Write-Host "      Skipping (Mode=$Mode)" -ForegroundColor Gray
 }
 
 # ─── Step 3: Hardware Scan ───
