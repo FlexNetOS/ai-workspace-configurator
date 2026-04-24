@@ -8,13 +8,11 @@ set "AIWS_BOOTSTRAP_REV=77af65c"
 
 echo [AIWS] bootstrap.cmd rev: %AIWS_BOOTSTRAP_REV%
 
+echo [AIWS] Fetching latest bootstrap.ps1...
+powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "$tmp='%BOOTSTRAP_PS1%.tmp'; $u='%BOOTSTRAP_PS1_URL%?v=%RANDOM%'; Invoke-WebRequest -Headers @{ 'Cache-Control'='no-cache'; 'Pragma'='no-cache' } -Uri $u -OutFile $tmp -MaximumRedirection 10; if((Test-Path $tmp) -and ((Get-Item $tmp).Length -gt 0)){ Move-Item -Force $tmp '%BOOTSTRAP_PS1%' } else { if(Test-Path $tmp){ Remove-Item -Force $tmp }; exit 2 }"
 if not exist "%BOOTSTRAP_PS1%" (
-  echo [Info] bootstrap.ps1 not found next to bootstrap.cmd. Downloading...
-  powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "$u='%BOOTSTRAP_PS1_URL%?v=%RANDOM%'; Invoke-WebRequest -Headers @{ 'Cache-Control'='no-cache'; 'Pragma'='no-cache' } -Uri $u -OutFile '%BOOTSTRAP_PS1%' -MaximumRedirection 10"
-  if not exist "%BOOTSTRAP_PS1%" (
-    echo [Error] Failed to download bootstrap.ps1 to: "%BOOTSTRAP_PS1%"
-    exit /b 2
-  )
+  echo [Error] Failed to fetch bootstrap.ps1 to: "%BOOTSTRAP_PS1%"
+  exit /b 2
 )
 
 rem Check for admin rights.
