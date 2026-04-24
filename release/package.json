@@ -1,7 +1,7 @@
 {
   "name": "ai-workspace-configurator",
   "private": true,
-  "version": "3.6.0",
+  "version": "0.0.0",
   "description": "AI Workspace Configurator — Desktop release metadata. Build via: npx electron-builder --projectDir release --config release/electron-builder.yml",
   "main": "electron/main.js",
   "author": "AI Workspace Team",

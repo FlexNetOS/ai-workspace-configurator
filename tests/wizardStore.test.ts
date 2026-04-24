@@ -220,4 +220,69 @@ describe('wizardStore', () => {
       expect(useWizardStore.getState().prerequisites[0]).toBe(true);
     });
   });
+
+  describe('browser preference', () => {
+    it('defaults to default browser', () => {
+      expect(useWizardStore.getState().preferredBrowser).toBe('default');
+    });
+
+    it('can set preferred browser', () => {
+      useWizardStore.getState().setPreferredBrowser('chrome');
+      expect(useWizardStore.getState().preferredBrowser).toBe('chrome');
+    });
+  });
+
+  describe('AI providers', () => {
+    it('has 4 AI providers initially disconnected', () => {
+      const state = useWizardStore.getState();
+      expect(state.aiProviders).toHaveLength(4);
+      expect(state.aiProviders.every((p) => p.status === 'disconnected')).toBe(true);
+    });
+
+    it('can link an AI provider with API key', () => {
+      useWizardStore.getState().setAiProviderStatus('openai', 'real_linked', {
+        authKind: 'real',
+        authRef: 'sk-test123',
+      });
+      const openai = useWizardStore.getState().aiProviders.find((p) => p.id === 'openai');
+      expect(openai?.status).toBe('real_linked');
+      expect(openai?.authRef).toBe('sk-test123');
+      expect(openai?.authKind).toBe('real');
+    });
+
+    it('can disconnect an AI provider', () => {
+      useWizardStore.getState().setAiProviderStatus('openai', 'real_linked', {
+        authKind: 'real',
+        authRef: 'sk-test',
+      });
+      useWizardStore.getState().setAiProviderStatus('openai', 'disconnected');
+      const openai = useWizardStore.getState().aiProviders.find((p) => p.id === 'openai');
+      expect(openai?.status).toBe('disconnected');
+      expect(openai?.authRef).toBeUndefined();
+    });
+  });
+
+  describe('CLI install queue', () => {
+    it('starts empty', () => {
+      expect(useWizardStore.getState().pendingCliInstalls).toEqual([]);
+    });
+
+    it('can queue a CLI package', () => {
+      useWizardStore.getState().queueCliInstall('@openai/cli');
+      expect(useWizardStore.getState().pendingCliInstalls).toContain('@openai/cli');
+    });
+
+    it('does not duplicate queued packages', () => {
+      useWizardStore.getState().queueCliInstall('@openai/cli');
+      useWizardStore.getState().queueCliInstall('@openai/cli');
+      expect(useWizardStore.getState().pendingCliInstalls).toEqual(['@openai/cli']);
+    });
+
+    it('can clear the queue', () => {
+      useWizardStore.getState().queueCliInstall('@openai/cli');
+      useWizardStore.getState().queueCliInstall('@anthropic-ai/cli');
+      useWizardStore.getState().clearCliQueue();
+      expect(useWizardStore.getState().pendingCliInstalls).toEqual([]);
+    });
+  });
 });

@@ -3,26 +3,42 @@ import { useState, useCallback, useEffect } from 'react';
 import {
   Container, Github, Database, Router, FileText, Chrome, Cloud, Settings,
   Globe, Check, Package, Sparkles, Link2, Shield, CheckCircle2, HardDrive, Loader2,
+  MessageSquare, Zap, KeyRound, X, ExternalLink,
 } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import useWizardStore from '@/store/wizardStore';
 import { generateDevOpsWorkspace, type GenerationResult } from '@/services/geminiService';
 import { containerVariants, cardVariants, easeSmooth } from './variants';
+import type { AccountStatus } from '@/store/wizardStore';
+
+const aiProviderIcons: Record<string, React.ReactNode> = {
+  openai: <Sparkles className="w-5 h-5 text-[#10A37F]" />,
+  anthropic: <MessageSquare className="w-5 h-5 text-[#D97757]" />,
+  kimi: <Zap className="w-5 h-5 text-[#8B5CF6]" />,
+  google_gemini: <Chrome className="w-5 h-5 text-[#4285F4]" />,
+};
 
 export default function Step2() {
-  const { providers, toggleProvider, policies, setPolicy, completeStep } = useWizardStore();
+  const {
+    providers, toggleProvider, policies, setPolicy, completeStep,
+    aiProviders, setAiProviderStatus, queueCliInstall, preferredBrowser,
+  } = useWizardStore();
   const [showPlan, setShowPlan] = useState(false);
   const [isGeneratingPlan, setIsGeneratingPlan] = useState(false);
   const [generatedPlan, setGeneratedPlan] = useState<GenerationResult | null>(null);
   const [planError, setPlanError] = useState<string | null>(null);
+  const [apiKeyModal, setApiKeyModal] = useState<{ open: boolean; providerId: string; providerName: string } | null>(null);
+  const [apiKeyInput, setApiKeyInput] = useState('');
+  const [connectingAiId, setConnectingAiId] = useState<string | null>(null);
 
-  // Auto-complete when at least Docker (required) is selected
+  // Auto-complete when at least Docker (required) is selected AND at least one AI provider is linked
   useEffect(() => {
     const dockerSelected = providers.find((p) => p.id === 'docker')?.selected;
-    if (dockerSelected) {
+    const aiLinked = aiProviders.some((p) => p.status === 'synthetic_linked' || p.status === 'real_linked');
+    if (dockerSelected && aiLinked) {
       completeStep(2);
     }
-  }, [providers, completeStep]);
+  }, [providers, aiProviders, completeStep]);
 
   const providerIcons: Record<string, React.ReactNode> = {
     docker: <Container className="w-5 h-5 text-[#2496ED]" />,
@@ -47,6 +63,82 @@ export default function Step2() {
 
   const selectedCount = providers.filter((p) => p.selected).length;
   const selectedProviderNames = providers.filter((p) => p.selected).map((p) => p.name);
+
+  const handleAiConnect = async (providerId: string) => {
+    const provider = aiProviders.find((p) => p.id === providerId);
+    if (!provider) return;
+
+    setConnectingAiId(providerId);
+
+    // Google Gemini uses OAuth via existing server endpoint
+    if (providerId === 'google_gemini') {
+      try {
+        const urlResp = await fetch(
+          `/api/auth/url/google?origin=${encodeURIComponent(window.location.origin)}`,
+          { method: 'GET' }
+        );
+        if (!urlResp.ok) throw new Error(`Auth API ${urlResp.status}`);
+        const data = await urlResp.json() as {
+          available: boolean; authUrl?: string; state?: string; reason?: string;
+        };
+        if (!data.available || !data.authUrl) {
+          // Fallback to synthetic link
+          setAiProviderStatus(providerId, 'synthetic_linked', {
+            authKind: 'synthetic',
+            authRef: `syn_${providerId}_${Math.random().toString(36).slice(2, 10)}`,
+            lastLinkedAt: new Date().toISOString(),
+          });
+          queueCliInstall(provider.cliPackage);
+          setConnectingAiId(null);
+          return;
+        }
+        window.open(data.authUrl, `oauth_${providerId}`, 'width=540,height=740,noopener,noreferrer');
+        setConnectingAiId(null);
+        return;
+      } catch {
+        // Fallback to synthetic
+        setAiProviderStatus(providerId, 'synthetic_linked', {
+          authKind: 'synthetic',
+          authRef: `syn_${providerId}_${Math.random().toString(36).slice(2, 10)}`,
+          lastLinkedAt: new Date().toISOString(),
+        });
+        queueCliInstall(provider.cliPackage);
+        setConnectingAiId(null);
+        return;
+      }
+    }
+
+    // OpenAI, Anthropic, Kimi use API key modal
+    setApiKeyModal({ open: true, providerId, providerName: provider.name });
+    setConnectingAiId(null);
+  };
+
+  const submitApiKey = () => {
+    if (!apiKeyModal || !apiKeyInput.trim()) return;
+    const provider = aiProviders.find((p) => p.id === apiKeyModal.providerId);
+    if (!provider) return;
+
+    setAiProviderStatus(apiKeyModal.providerId, 'real_linked', {
+      authKind: 'real',
+      authRef: apiKeyInput.trim(),
+      lastLinkedAt: new Date().toISOString(),
+    });
+    queueCliInstall(provider.cliPackage);
+    setApiKeyModal(null);
+    setApiKeyInput('');
+  };
+
+  const disconnectAiProvider = (providerId: string) => {
+    setAiProviderStatus(providerId, 'disconnected');
+  };
+
+  const aiStatusBadge = (status: AccountStatus) => {
+    switch (status) {
+      case 'real_linked': return <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-[rgba(16,185,129,0.1)] text-[#10B981] border border-[rgba(16,185,129,0.25)] flex items-center gap-1"><Check className="w-3 h-3" />Connected</span>;
+      case 'synthetic_linked': return <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-[rgba(37,99,235,0.1)] text-[#2563EB] border border-[rgba(37,99,235,0.25)] flex items-center gap-1"><Link2 className="w-3 h-3" />Linked</span>;
+      default: return <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-[rgba(255,255,255,0.04)] text-[#64748B] border border-[rgba(255,255,255,0.08)]">Not Connected</span>;
+    }
+  };
 
   const handleGeneratePlan = useCallback(async () => {
     setShowPlan(true);
@@ -89,10 +181,68 @@ export default function Step2() {
 
   return (
     <motion.div variants={containerVariants} initial="initial" animate="animate" className="space-y-6">
+      {/* ── AI Provider Connection ── */}
       <motion.div variants={cardVariants}>
-        <h1 className="text-[32px] font-bold text-[#F0F4F8] tracking-[-0.02em] mb-2">Choose Your Providers</h1>
+        <h1 className="text-[32px] font-bold text-[#F0F4F8] tracking-[-0.02em] mb-2">Connect Your AI</h1>
         <p className="text-[14px] text-[#94A3B8] mb-4">
-          Select which services and AI providers you want to use. You can change these later.
+          Link your preferred AI provider. API keys are stored locally. CLIs will be installed after PowerShell setup.
+        </p>
+        {preferredBrowser !== 'default' && (
+          <p className="text-[12px] text-[#06B6D4] mb-3 flex items-center gap-1">
+            <Globe className="w-3.5 h-3.5" />
+            OAuth flows will open in {preferredBrowser.charAt(0).toUpperCase() + preferredBrowser.slice(1)}
+          </p>
+        )}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          {aiProviders.map((p) => (
+            <motion.div
+              key={p.id}
+              className={`relative p-4 rounded-2xl border transition-all ${
+                p.status === 'real_linked' || p.status === 'synthetic_linked'
+                  ? 'border-[rgba(16,185,129,0.3)] bg-[rgba(16,185,129,0.04)]'
+                  : 'border-[rgba(255,255,255,0.06)] bg-[#0B1120]'
+              }`}
+              whileHover={{ y: -2 }}
+            >
+              <div className="flex items-center gap-3 mb-2">
+                {aiProviderIcons[p.id] || <Globe className="w-5 h-5" />}
+                <span className="text-[14px] font-semibold text-[#F0F4F8]">{p.name}</span>
+              </div>
+              <p className="text-[12px] text-[#64748B] mb-3">{p.description}</p>
+              <div className="flex items-center justify-between">
+                {aiStatusBadge(p.status)}
+                <div className="flex gap-2">
+                  {(p.status === 'real_linked' || p.status === 'synthetic_linked') ? (
+                    <motion.button
+                      onClick={() => disconnectAiProvider(p.id)}
+                      className="px-3 py-1.5 rounded-lg text-[11px] font-semibold text-[#EF4444] border border-[rgba(239,68,68,0.2)] hover:bg-[rgba(239,68,68,0.05)]"
+                      whileTap={{ scale: 0.97 }}
+                    >
+                      Disconnect
+                    </motion.button>
+                  ) : (
+                    <motion.button
+                      onClick={() => void handleAiConnect(p.id)}
+                      disabled={connectingAiId === p.id}
+                      className="px-3 py-1.5 rounded-lg text-[11px] font-semibold text-white"
+                      style={{ background: 'linear-gradient(135deg, #2563EB 0%, #06B6D4 100%)' }}
+                      whileTap={{ scale: 0.97 }}
+                    >
+                      {connectingAiId === p.id ? 'Connecting...' : 'Connect'}
+                    </motion.button>
+                  )}
+                </div>
+              </div>
+            </motion.div>
+          ))}
+        </div>
+      </motion.div>
+
+      {/* ── Service Providers ── */}
+      <motion.div variants={cardVariants}>
+        <h2 className="text-[24px] font-semibold text-[#F0F4F8] tracking-[-0.01em] mb-2">Service Providers</h2>
+        <p className="text-[14px] text-[#94A3B8] mb-4">
+          Select which infrastructure services you want to integrate.
         </p>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {providers.map((p) => (
@@ -124,6 +274,79 @@ export default function Step2() {
           ))}
         </div>
       </motion.div>
+
+      {/* ── API Key Modal ── */}
+      <AnimatePresence>
+        {apiKeyModal?.open && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[60] flex items-center justify-center bg-[rgba(2,6,23,0.85)] backdrop-blur-sm"
+            onClick={() => { setApiKeyModal(null); setApiKeyInput(''); }}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="w-[420px] max-w-[calc(100vw-32px)] rounded-2xl border border-[rgba(255,255,255,0.08)] bg-[#0B1120] p-6"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-[18px] font-bold text-[#F0F4F8]">Connect {apiKeyModal.providerName}</h3>
+                <button
+                  onClick={() => { setApiKeyModal(null); setApiKeyInput(''); }}
+                  className="text-[#64748B] hover:text-[#F0F4F8]"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              <p className="text-[13px] text-[#94A3B8] mb-4">
+                Enter your API key for {apiKeyModal.providerName}. This is stored locally in your browser and never sent to our servers.
+              </p>
+              <div className="flex items-center gap-2 p-3 rounded-xl bg-[rgba(245,158,11,0.06)] border border-[rgba(245,158,11,0.15)] mb-4">
+                <KeyRound className="w-4 h-4 text-[#F59E0B] flex-shrink-0" />
+                <p className="text-[11px] text-[#F59E0B]">
+                  Keep your key secure. You can revoke it from the provider dashboard anytime.
+                </p>
+              </div>
+              <input
+                type="password"
+                value={apiKeyInput}
+                onChange={(e) => setApiKeyInput(e.target.value)}
+                placeholder="sk-..."
+                className="w-full p-3 rounded-xl bg-[#050A18] border border-[rgba(255,255,255,0.08)] text-[13px] text-[#F0F4F8] placeholder:text-[#475569] focus:outline-none focus:border-[#2563EB] mb-4"
+              />
+              <div className="flex gap-3">
+                <motion.button
+                  onClick={submitApiKey}
+                  disabled={!apiKeyInput.trim()}
+                  className="flex-1 py-2.5 rounded-[10px] text-[13px] font-semibold text-white disabled:opacity-40"
+                  style={{ background: 'linear-gradient(135deg, #2563EB 0%, #06B6D4 100%)' }}
+                  whileTap={{ scale: 0.97 }}
+                >
+                  Connect
+                </motion.button>
+                <button
+                  onClick={() => { setApiKeyModal(null); setApiKeyInput(''); }}
+                  className="px-4 py-2.5 rounded-[10px] text-[13px] font-medium text-[#94A3B8] border border-[rgba(255,255,255,0.12)] hover:bg-[rgba(255,255,255,0.04)]"
+                >
+                  Cancel
+                </button>
+              </div>
+              <a
+                href={`https://www.google.com/search?q=${encodeURIComponent(apiKeyModal.providerName + ' API key')}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-3 inline-flex items-center gap-1 text-[11px] text-[#3B82F6] hover:text-[#60A5FA]"
+              >
+                <ExternalLink className="w-3 h-3" />
+                How do I get an API key?
+              </a>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <motion.div variants={cardVariants} className="rounded-2xl border border-[rgba(255,255,255,0.06)] bg-[#0B1120] p-6">
         <h2 className="text-[24px] font-semibold text-[#F0F4F8] tracking-[-0.01em] mb-4">Security & Privacy Preferences</h2>

@@ -10,6 +10,20 @@ export type AccountStatus =
   | 'failed';
 export type AccountLinkKind = 'synthetic' | 'real';
 
+export interface AiProvider {
+  id: string;
+  name: string;
+  description: string;
+  icon: string;
+  status: AccountStatus;
+  authRef?: string;
+  authKind?: AccountLinkKind;
+  lastLinkedAt?: string;
+  lastError?: string;
+  cliPackage: string;
+  installCommand: string;
+}
+
 export interface Provider {
   id: string;
   name: string;
@@ -56,6 +70,9 @@ export interface WizardState {
   welcomeSeen: boolean;
   prerequisites: boolean[];
   showTerminal: boolean;
+  preferredBrowser: string;
+  aiProviders: AiProvider[];
+  pendingCliInstalls: string[];
 
   setCurrentStep: (step: number) => void;
   completeStep: (step: number) => void;
@@ -75,6 +92,10 @@ export interface WizardState {
   setWelcomeSeen: (seen: boolean) => void;
   setPrerequisite: (index: number, value: boolean) => void;
   setShowTerminal: (show: boolean) => void;
+  setPreferredBrowser: (browser: string) => void;
+  setAiProviderStatus: (id: string, status: AccountStatus, meta?: AccountStatusUpdate) => void;
+  queueCliInstall: (packageName: string) => void;
+  clearCliQueue: () => void;
   reset: () => void;
 }
 
@@ -99,6 +120,13 @@ const initialAccounts: Account[] = [
   { id: 'notion', name: 'Notion', description: 'Documentation sync', icon: 'FileText', status: 'disconnected' },
   { id: 'google', name: 'Google', description: 'Cloud and Gemini', icon: 'Chrome', status: 'disconnected' },
   { id: 'cloudflare', name: 'Cloudflare', description: 'DNS and edge AI', icon: 'Cloud', status: 'disconnected' },
+];
+
+const initialAiProviders: AiProvider[] = [
+  { id: 'openai', name: 'OpenAI', description: 'ChatGPT Plus & API access', icon: 'Sparkles', status: 'disconnected', cliPackage: '@openai/cli', installCommand: 'npm install -g openai' },
+  { id: 'anthropic', name: 'Anthropic', description: 'Claude Pro & API access', icon: 'MessageSquare', status: 'disconnected', cliPackage: '@anthropic-ai/cli', installCommand: 'npm install -g @anthropic-ai/cli' },
+  { id: 'kimi', name: 'Kimi', description: 'Moonshot AI & Kimi Code CLI', icon: 'Zap', status: 'disconnected', cliPackage: '@moonshot-ai/kimi-cli', installCommand: 'npm install -g kimi-cli' },
+  { id: 'google_gemini', name: 'Google Gemini', description: 'Gemini API & Google Cloud', icon: 'Chrome', status: 'disconnected', cliPackage: '@google/gemini-cli', installCommand: 'npm install -g @google/gemini-cli' },
 ];
 
 const initialPolicies: Record<string, boolean> = {
@@ -214,6 +242,9 @@ const makeInitialState = () => ({
   welcomeSeen: false,
   prerequisites: new Array(4).fill(false),
   showTerminal: false,
+  preferredBrowser: 'default',
+  aiProviders: initialAiProviders.map((p) => ({ ...p })),
+  pendingCliInstalls: [],
 });
 
 const useWizardStore = create<WizardState>()(
@@ -299,6 +330,38 @@ const useWizardStore = create<WizardState>()(
           return { prerequisites: newPrereqs };
         }),
       setShowTerminal: (show) => set({ showTerminal: show }),
+      setPreferredBrowser: (browser) => set({ preferredBrowser: browser }),
+      setAiProviderStatus: (id, status, meta) =>
+        set((state) => ({
+          aiProviders: state.aiProviders.map((p) => {
+            if (p.id !== id) return p;
+            if (status === 'disconnected') {
+              return {
+                ...p,
+                status,
+                authKind: undefined,
+                authRef: undefined,
+                lastLinkedAt: undefined,
+                lastError: undefined,
+              };
+            }
+            return {
+              ...p,
+              status,
+              authKind: meta?.authKind ?? p.authKind,
+              authRef: meta?.authRef ?? p.authRef,
+              lastLinkedAt: meta?.lastLinkedAt ?? p.lastLinkedAt,
+              lastError: meta?.lastError ?? p.lastError,
+            };
+          }),
+        })),
+      queueCliInstall: (packageName) =>
+        set((state) => ({
+          pendingCliInstalls: state.pendingCliInstalls.includes(packageName)
+            ? state.pendingCliInstalls
+            : [...state.pendingCliInstalls, packageName],
+        })),
+      clearCliQueue: () => set({ pendingCliInstalls: [] }),
       reset: () => set({ ...makeInitialState() }),
     }),
     {
@@ -327,6 +390,9 @@ const useWizardStore = create<WizardState>()(
         welcomeSeen: state.welcomeSeen,
         prerequisites: state.prerequisites,
         checkpoints: state.checkpoints,
+        preferredBrowser: state.preferredBrowser,
+        aiProviders: state.aiProviders,
+        pendingCliInstalls: state.pendingCliInstalls,
       }),
     }
   )

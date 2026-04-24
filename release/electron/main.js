@@ -9,10 +9,44 @@ const { spawn } = require('child_process');
 const fs = require('fs');
 const os = require('os');
 
+// ─── Browser Launcher ───
+const browserPaths = {
+  chrome: [
+    'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
+    'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
+  ],
+  edge: [
+    'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe',
+    'C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe',
+  ],
+  firefox: [
+    'C:\\Program Files\\Mozilla Firefox\\firefox.exe',
+    'C:\\Program Files (x86)\\Mozilla Firefox\\firefox.exe',
+  ],
+  chromium: [
+    'C:\\Program Files\\Chromium\\Application\\chrome.exe',
+    'C:\\Program Files (x86)\\Chromium\\Application\\chrome.exe',
+  ],
+};
+
+function findBrowserExe(browserId) {
+  const paths = browserPaths[browserId];
+  if (!paths) return null;
+  for (const p of paths) {
+    if (fs.existsSync(p)) return p;
+  }
+  return null;
+}
+
 // ─── Config ───
 const isDev = process.env.NODE_ENV === 'development';
 const APP_NAME = 'AI Workspace Configurator';
-const APP_VERSION = '3.6.0';
+// Read version from release/package.json (one level up from electron/)
+let APP_VERSION = '0.0.0';
+try {
+  const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'package.json'), 'utf8'));
+  APP_VERSION = pkg.version || APP_VERSION;
+} catch { /* fallback to default */ }
 
 // ─── Single Instance Lock ───
 const gotTheLock = app.requestSingleInstanceLock();

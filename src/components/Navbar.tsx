@@ -133,7 +133,7 @@ export default function Navbar() {
             textTransform: 'uppercase',
           }}
         >
-          v3.6.0
+          v{__APP_VERSION__}
         </span>
       </div>
     </header>
