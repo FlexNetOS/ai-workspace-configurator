@@ -30,6 +30,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and ver
 - Updated download/install UI guidance to prefer `bootstrap.cmd` and avoid pipe-to-iex execution.
 - Made Preflight (`CheckOnly`) the default path in `bootstrap.cmd` and updated UI copy to identify Preflight-first as the recommended flow.
 - Switched bootstrap launcher/script downloads to raw GitHub URLs to avoid GitHub Pages update lag during active development.
+- Added a visible bootstrap script revision + cache-busting download behavior so users can confirm they’re running the latest scripts without needing tags.
 
 ### Fixed
 - Fixed GitHub release build failure caused by fake integrity hashes in `release/package-lock.json` (`EINTEGRITY`).

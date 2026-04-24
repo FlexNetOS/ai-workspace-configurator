@@ -27,9 +27,12 @@ param(
 $ErrorActionPreference = "Stop"
 $ProgressPreference = "Continue"
 
+$ScriptRevision = "77af65c"
+
 # Canonical hosted scripts base (used if companion scripts are missing locally)
 # Prefer raw GitHub URLs so script updates take effect immediately (no GitHub Pages rebuild lag).
 $ScriptsBaseUrl = "https://raw.githubusercontent.com/FlexNetOS/ai-workspace-configurator/master/public/scripts"
+$cacheBust = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()
 
 # If the user didn’t provide a VHDX path, default it under the workspace dir to keep state together.
 if (-not $PSBoundParameters.ContainsKey("VhdxPath")) {
@@ -46,6 +49,7 @@ Write-Host @"
 ║                                                                  ║
 ╚══════════════════════════════════════════════════════════════════╝
 "@ -ForegroundColor Cyan
+Write-Host "      bootstrap.ps1 rev: $ScriptRevision" -ForegroundColor DarkGray
 
 if ($Mode -eq "CheckOnly") {
     Write-Host "      PRE-FLIGHT MODE (CheckOnly): no installs will run" -ForegroundColor Yellow
@@ -78,7 +82,7 @@ foreach ($name in $companionScripts) {
 
     $url = "$ScriptsBaseUrl/$name"
     try {
-        Invoke-WebRequest -Uri $url -OutFile $tmp -MaximumRedirection 10
+        Invoke-WebRequest -Uri "$url?v=$cacheBust" -Headers @{ "Cache-Control" = "no-cache"; "Pragma" = "no-cache" } -OutFile $tmp -MaximumRedirection 10
         if ((Test-Path $tmp) -and ((Get-Item $tmp).Length -gt 0)) {
             Move-Item -Path $tmp -Destination $dest -Force
             Unblock-File -Path $dest -ErrorAction SilentlyContinue

@@ -4,10 +4,13 @@ setlocal EnableExtensions
 set "SCRIPT_DIR=%~dp0"
 set "BOOTSTRAP_PS1=%SCRIPT_DIR%bootstrap.ps1"
 set "BOOTSTRAP_PS1_URL=https://raw.githubusercontent.com/FlexNetOS/ai-workspace-configurator/master/public/scripts/bootstrap.ps1"
+set "AIWS_BOOTSTRAP_REV=77af65c"
+
+echo [AIWS] bootstrap.cmd rev: %AIWS_BOOTSTRAP_REV%
 
 if not exist "%BOOTSTRAP_PS1%" (
   echo [Info] bootstrap.ps1 not found next to bootstrap.cmd. Downloading...
-  powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "Invoke-WebRequest -Uri '%BOOTSTRAP_PS1_URL%' -OutFile '%BOOTSTRAP_PS1%' -MaximumRedirection 10"
+  powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "$u='%BOOTSTRAP_PS1_URL%?v=%RANDOM%'; Invoke-WebRequest -Headers @{ 'Cache-Control'='no-cache'; 'Pragma'='no-cache' } -Uri $u -OutFile '%BOOTSTRAP_PS1%' -MaximumRedirection 10"
   if not exist "%BOOTSTRAP_PS1%" (
     echo [Error] Failed to download bootstrap.ps1 to: "%BOOTSTRAP_PS1%"
     exit /b 2
