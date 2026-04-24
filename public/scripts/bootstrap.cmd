@@ -4,7 +4,7 @@ setlocal EnableExtensions
 set "SCRIPT_DIR=%~dp0"
 set "BOOTSTRAP_PS1=%SCRIPT_DIR%bootstrap.ps1"
 set "BOOTSTRAP_PS1_URL=https://raw.githubusercontent.com/FlexNetOS/ai-workspace-configurator/master/public/scripts/bootstrap.ps1"
-set "AIWS_BOOTSTRAP_REV=76901fb"
+set "AIWS_BOOTSTRAP_REV=1147e51"
 
 echo [AIWS] bootstrap.cmd rev: %AIWS_BOOTSTRAP_REV%
 

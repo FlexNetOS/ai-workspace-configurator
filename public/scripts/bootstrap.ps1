@@ -27,7 +27,7 @@ param(
 $ErrorActionPreference = "Stop"
 $ProgressPreference = "Continue"
 
-$ScriptRevision = "76901fb"
+$ScriptRevision = "1147e51"
 
 # Canonical hosted scripts base (used if companion scripts are missing locally)
 # Prefer raw GitHub URLs so script updates take effect immediately (no GitHub Pages rebuild lag).
@@ -64,6 +64,46 @@ Write-Host "      Directories ready" -ForegroundColor Green
 # Ensure companion scripts exist in $WorkspaceDir\scripts (copy from local bundle or download)
 Write-Host "      Syncing companion scripts..." -ForegroundColor Gray
 $companionScripts = @("SecurityCheck.ps1", "HardwareScan.ps1", "VhdxManager.ps1", "InstallStack.ps1")
+
+function Invoke-DownloadFile {
+    param(
+        [Parameter(Mandatory = $true)][string]$Url,
+        [Parameter(Mandatory = $true)][string]$OutFile
+    )
+
+    $headers = @{
+        "Cache-Control" = "no-cache"
+        "Pragma"        = "no-cache"
+        "User-Agent"    = "AIWS-Bootstrap"
+    }
+
+    Invoke-WebRequest -Uri $Url -Headers $headers -OutFile $OutFile -MaximumRedirection 10 -ErrorAction Stop | Out-Null
+}
+
+function Download-FileWithRetry {
+    param(
+        [Parameter(Mandatory = $true)][string]$Url,
+        [Parameter(Mandatory = $true)][string]$OutFile,
+        [int]$Attempts = 3
+    )
+
+    for ($attempt = 1; $attempt -le $Attempts; $attempt++) {
+        try {
+            Invoke-DownloadFile -Url $Url -OutFile $OutFile
+            return $true
+        } catch {
+            if ($attempt -ge $Attempts) {
+                Write-Host "      Download failed after $Attempts attempts: $Url" -ForegroundColor Yellow
+                Write-Host "      Error: $($_.Exception.Message)" -ForegroundColor DarkGray
+                return $false
+            }
+            Start-Sleep -Seconds ([Math]::Min(5, $attempt * 2))
+        }
+    }
+
+    return $false
+}
+
 foreach ($name in $companionScripts) {
     $dest = Join-Path "$WorkspaceDir\scripts" $name
     $tmp = "$dest.tmp"
@@ -82,7 +122,8 @@ foreach ($name in $companionScripts) {
 
     $url = "$ScriptsBaseUrl/$name"
     try {
-        Invoke-WebRequest -Uri "$url?v=$cacheBust" -Headers @{ "Cache-Control" = "no-cache"; "Pragma" = "no-cache" } -OutFile $tmp -MaximumRedirection 10
+        $ok = Download-FileWithRetry -Url "$url?v=$cacheBust" -OutFile $tmp -Attempts 3
+        if (-not $ok) { throw "download_failed" }
         if ((Test-Path $tmp) -and ((Get-Item $tmp).Length -gt 0)) {
             Move-Item -Path $tmp -Destination $dest -Force
             Unblock-File -Path $dest -ErrorAction SilentlyContinue

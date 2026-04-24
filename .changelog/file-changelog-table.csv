@@ -40,3 +40,5 @@ public/scripts/bootstrap.ps1,updated,active,"Add visible script revision + cache
 public/scripts/bootstrap.cmd,updated,active,"Always refresh bootstrap.ps1 next to the launcher before running","Prevent stale bootstrap.ps1 from persisting in %TEMP% across runs",2026-04-24
 public/scripts/bootstrap.cmd,updated,active,"Update displayed launcher revision string","Make it obvious when users have pulled the latest bootstrap.cmd",2026-04-24
 public/scripts/bootstrap.ps1,updated,active,"Update displayed script revision string","Make it obvious when users have pulled the latest bootstrap.ps1",2026-04-24
+public/scripts/bootstrap.ps1,updated,active,"Add retry + error detail for companion script downloads","Reduce transient download failures and provide actionable diagnostics when GitHub fetches fail",2026-04-24
+public/scripts/bootstrap.cmd,updated,active,"Update displayed launcher revision string","Keep revision marker aligned with latest master for troubleshooting",2026-04-24
