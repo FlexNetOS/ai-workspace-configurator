@@ -26,3 +26,10 @@ docs/win11-pro-settings.md,updated,active,"Added Preflight/Install notes for boo
 public/scripts/bootstrap.ps1,updated,active,"Default VHDX path under WorkspaceDir when not provided and create WSL dir from VhdxPath","Keep all mutable state under the chosen workspace drive and avoid unexpected C:\\Users\\<user>\\WSL folders",2026-04-24
 public/scripts/bootstrap.ps1,updated,active,"Skip restore point in CheckOnly and block Full/InstallOnly until SecurityCheck reports readyToInstall","Make preflight safe and prevent partial installs when prerequisites are not met",2026-04-24
 public/scripts/SecurityCheck.ps1,updated,active,"Add wslReady check, readyToInstall flag, and broader -Fix behavior for WSL and Windows Update","Make preflight output actionable and allow bootstrap to safely gate installs",2026-04-24
+public/scripts/bootstrap.cmd,updated,active,"Fetch bootstrap.ps1 from raw GitHub instead of GitHub Pages","Avoid GitHub Pages rebuild lag so users always get latest script fixes",2026-04-24
+public/scripts/bootstrap.ps1,updated,active,"Download companion scripts from raw GitHub instead of GitHub Pages","Ensure companion scripts stay in sync with the latest repo changes",2026-04-24
+public/scripts/SecurityCheck.ps1,updated,active,"Detect WSL install state via wsl.exe instead of optional feature flag","Prevent false 'WSL not installed' when WSL2 is present via Store-based installs",2026-04-24
+src/components/DownloadAppButton.tsx,updated,active,"Updated bootstrap one-liner to use raw GitHub URL","Ensure copy/paste install command always pulls the latest script version",2026-04-24
+src/components/ScriptPanel.tsx,updated,active,"Updated one-liner to use raw GitHub URL","Ensure script instructions are consistent with the latest bootstrap launcher",2026-04-24
+src/components/AutoDiscoveryPanel.tsx,updated,active,"Updated preflight copy-command to use raw GitHub URL","Avoid stale hosted script references and reduce user confusion",2026-04-24
+docs/win11-pro-pwsh-commands.md,updated,active,"Updated bootstrap.cmd download URL to raw GitHub URL","Keep documentation aligned with the recommended launcher source",2026-04-24

@@ -3,7 +3,7 @@ setlocal EnableExtensions
 
 set "SCRIPT_DIR=%~dp0"
 set "BOOTSTRAP_PS1=%SCRIPT_DIR%bootstrap.ps1"
-set "BOOTSTRAP_PS1_URL=https://flexnetos.github.io/ai-workspace-configurator/scripts/bootstrap.ps1"
+set "BOOTSTRAP_PS1_URL=https://raw.githubusercontent.com/FlexNetOS/ai-workspace-configurator/master/public/scripts/bootstrap.ps1"
 
 if not exist "%BOOTSTRAP_PS1%" (
   echo [Info] bootstrap.ps1 not found next to bootstrap.cmd. Downloading...

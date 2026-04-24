@@ -387,7 +387,7 @@ export default function AutoDiscoveryPanel() {
               <button
                 onClick={() => {
                   navigator.clipboard.writeText(
-                    'iwr https://flexnetos.github.io/ai-workspace-configurator/scripts/bootstrap.cmd -OutFile $env:TEMP\\aiws-bootstrap.cmd; & $env:TEMP\\aiws-bootstrap.cmd -Mode CheckOnly'
+                    'iwr https://raw.githubusercontent.com/FlexNetOS/ai-workspace-configurator/master/public/scripts/bootstrap.cmd -OutFile $env:TEMP\\aiws-bootstrap.cmd; & $env:TEMP\\aiws-bootstrap.cmd -Mode CheckOnly'
                   );
                   setCopied(true);
                   setTimeout(() => setCopied(false), 2000);
@@ -399,7 +399,7 @@ export default function AutoDiscoveryPanel() {
               </button>
             </div>
             <code className="block text-[12px] text-[#67E8F9] font-mono leading-relaxed">
-              iwr https://flexnetos.github.io/ai-workspace-configurator/scripts/bootstrap.cmd -OutFile $env:TEMP\aiws-bootstrap.cmd; &amp; $env:TEMP\aiws-bootstrap.cmd -Mode CheckOnly
+              iwr https://raw.githubusercontent.com/FlexNetOS/ai-workspace-configurator/master/public/scripts/bootstrap.cmd -OutFile $env:TEMP\aiws-bootstrap.cmd; &amp; $env:TEMP\aiws-bootstrap.cmd -Mode CheckOnly
             </code>
           </div>
 

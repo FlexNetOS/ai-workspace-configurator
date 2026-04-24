@@ -99,15 +99,28 @@ function Test-SecureBoot {
 }
 
 function Test-WSLInstalled {
-    $wsl = Get-WindowsOptionalFeature -Online -FeatureName Microsoft-Windows-Subsystem-Linux -ErrorAction SilentlyContinue
-    $installed = ($wsl -and $wsl.State -eq "Enabled")
-    return @{ passed = $installed; value = if ($installed) { "Installed" } else { "Not installed" }; severity = "critical";
-              remediation = "wsl --install (will require restart)" }
+    try {
+        & wsl.exe --status *> $null
+        $ok = ($LASTEXITCODE -eq 0)
+        return @{
+            passed = $ok
+            value = if ($ok) { "Installed" } else { "Not installed" }
+            severity = "critical"
+            remediation = "wsl --install (will require restart)"
+        }
+    } catch {
+        return @{
+            passed = $false
+            value = "Not installed"
+            severity = "critical"
+            remediation = "wsl --install (will require restart)"
+        }
+    }
 }
 
 function Test-WSLReady {
     try {
-        & wsl.exe --status *>$null
+        & wsl.exe --status *> $null
         $ok = ($LASTEXITCODE -eq 0)
         return @{
             passed = $ok

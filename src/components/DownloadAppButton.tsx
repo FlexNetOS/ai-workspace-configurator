@@ -61,7 +61,7 @@ const downloadOptions: DownloadOption[] = [
 ];
 
 // The one-liner install command (will work once pushed to GitHub)
-const installCommand = "iwr https://flexnetos.github.io/ai-workspace-configurator/scripts/bootstrap.cmd -OutFile $env:TEMP\\ai-workspace-bootstrap.cmd; & $env:TEMP\\ai-workspace-bootstrap.cmd -Mode CheckOnly";
+const installCommand = "iwr https://raw.githubusercontent.com/FlexNetOS/ai-workspace-configurator/master/public/scripts/bootstrap.cmd -OutFile $env:TEMP\\ai-workspace-bootstrap.cmd; & $env:TEMP\\ai-workspace-bootstrap.cmd -Mode CheckOnly";
 
 export function DownloadAppModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
   const [downloaded, setDownloaded] = useState<string | null>(null);

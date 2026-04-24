@@ -29,6 +29,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and ver
 - Simplified `release/package.json` to metadata-only with explicit private flag.
 - Updated download/install UI guidance to prefer `bootstrap.cmd` and avoid pipe-to-iex execution.
 - Made Preflight (`CheckOnly`) the default path in `bootstrap.cmd` and updated UI copy to identify Preflight-first as the recommended flow.
+- Switched bootstrap launcher/script downloads to raw GitHub URLs to avoid GitHub Pages update lag during active development.
 
 ### Fixed
 - Fixed GitHub release build failure caused by fake integrity hashes in `release/package-lock.json` (`EINTEGRITY`).
@@ -37,6 +38,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and ver
 - Fixed `Install-App.ps1` elevation path to re-launch via `-File` instead of pipe-to-iex and removed `-UseBasicParsing` for pwsh compatibility.
 - Fixed default VHDX/WSL directory behavior so choosing a workspace drive (e.g. `F:\`) keeps state under that workspace instead of creating `C:\Users\<user>\WSL` by default.
 - Fixed bootstrap to skip restore point creation in Preflight (`CheckOnly`) and to block Full/InstallOnly runs until prerequisites (WSL, updates, reboot) are satisfied.
+- Fixed SecurityCheck to detect WSL install state via `wsl.exe` so WSL2 Store-based installs don’t show a false “not installed” result.
 
 ### Removed
 - Removed dependency on `release/package-lock.json` and release-local `npm install` flow.

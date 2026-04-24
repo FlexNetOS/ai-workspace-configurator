@@ -21,7 +21,7 @@ Or from a one-liner (downloads the launcher, then runs it):
 
 ```powershell
 $cmd = Join-Path $env:TEMP 'aiws-bootstrap.cmd'
-iwr 'https://flexnetos.github.io/ai-workspace-configurator/scripts/bootstrap.cmd' -OutFile $cmd
+iwr 'https://raw.githubusercontent.com/FlexNetOS/ai-workspace-configurator/master/public/scripts/bootstrap.cmd' -OutFile $cmd
 & $cmd -Mode CheckOnly
 ```
 

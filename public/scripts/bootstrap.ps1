@@ -28,7 +28,8 @@ $ErrorActionPreference = "Stop"
 $ProgressPreference = "Continue"
 
 # Canonical hosted scripts base (used if companion scripts are missing locally)
-$ScriptsBaseUrl = "https://flexnetos.github.io/ai-workspace-configurator/scripts"
+# Prefer raw GitHub URLs so script updates take effect immediately (no GitHub Pages rebuild lag).
+$ScriptsBaseUrl = "https://raw.githubusercontent.com/FlexNetOS/ai-workspace-configurator/master/public/scripts"
 
 # If the user didn’t provide a VHDX path, default it under the workspace dir to keep state together.
 if (-not $PSBoundParameters.ContainsKey("VhdxPath")) {

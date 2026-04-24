@@ -332,7 +332,7 @@ export default function ScriptPanel() {
                 <h4 className="text-[14px] font-semibold text-[#10B981]">One-Liner (Advanced)</h4>
               </div>
               <code className="block p-3 rounded-lg bg-[#050A18] border border-[rgba(255,255,255,0.06)] text-[#67E8F9] text-[11px] font-mono break-all">
-                iwr https://flexnetos.github.io/ai-workspace-configurator/scripts/bootstrap.cmd -OutFile $env:TEMP\ai-workspace-bootstrap.cmd; & $env:TEMP\ai-workspace-bootstrap.cmd -Mode CheckOnly
+                iwr https://raw.githubusercontent.com/FlexNetOS/ai-workspace-configurator/master/public/scripts/bootstrap.cmd -OutFile $env:TEMP\ai-workspace-bootstrap.cmd; & $env:TEMP\ai-workspace-bootstrap.cmd -Mode CheckOnly
               </code>
               <p className="text-[11px] text-[#475569] mt-2">
                 Downloads and runs the bootstrap launcher. Only use from trusted sources.
