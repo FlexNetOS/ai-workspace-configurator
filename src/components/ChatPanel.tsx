@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   X, Send, Bot, User, RotateCcw,
@@ -8,6 +8,13 @@ import useChatStore from '@/store/chatStore';
 import useWizardStore from '@/store/wizardStore';
 import useHardwareRegistry, { generateHardwareSkill } from '@/store/hardwareRegistryStore';
 import { sendMessage, type Message as AIMessage } from '@/lib/aiService';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 /* ═══════════════════════════════════════════════════════════════
    Context-Aware Response Engine
@@ -29,6 +36,13 @@ const stepKnowledge: Record<number, { title: string; why: string; time: string; 
   13: { title: 'Run E2E Tests', why: 'Verifies everything works: Docker, WSL, GPU, models.', time: '~5 min', tip: 'If a test fails, expand it to see the diagnostic output.' },
   14: { title: 'Provision Environment', why: 'Creates dev, sandbox, or simulation workspace.', time: '~3 min', tip: 'Choose "Development" for the full experience.' },
   15: { title: 'Hardware Tuning', why: 'Optimizes CPU/GPU settings for AI workloads.', time: '~5 min', tip: 'BIOS tweaks are optional — skip if you are not comfortable.' },
+};
+
+const PROVIDER_MODELS: Record<string, string> = {
+  openai: 'gpt-4o',
+  anthropic: 'claude-3-5-sonnet-20241022',
+  kimi: 'kimi-k2-0711-preview',
+  google_gemini: 'gemini-3-flash-preview',
 };
 
 const glossary: Record<string, string> = {
@@ -139,14 +153,30 @@ const buildAiConversation = (
    ═══════════════════════════════════════════════════════════════ */
 
 export default function ChatPanel() {
-  const { isOpen, toggle, close, messages, addMessage, isTyping, setTyping, suggestedPrompts, setSuggestedPrompts } = useChatStore();
+  const { isOpen, toggle, close, messages, addMessage, isTyping, setTyping, suggestedPrompts, setSuggestedPrompts, selectedProviderId, setSelectedProviderId } = useChatStore();
   const currentStep = useWizardStore((s) => s.currentStep);
   const completedSteps = useWizardStore((s) => s.completedSteps);
   const linkedAccounts = useWizardStore((s) => s.linkedAccounts);
+  const aiProviders = useWizardStore((s) => s.aiProviders);
 
   const [input, setInput] = useState('');
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  const linkedAiProviders = useMemo(
+    () => aiProviders.filter((p) => p.status === 'real_linked' || p.status === 'synthetic_linked'),
+    [aiProviders]
+  );
+
+  /* ── Auto-select first linked provider when none selected ── */
+  useEffect(() => {
+    if (!selectedProviderId && linkedAiProviders.length > 0) {
+      setSelectedProviderId(linkedAiProviders[0].id);
+    }
+    if (selectedProviderId && !linkedAiProviders.some((p) => p.id === selectedProviderId)) {
+      setSelectedProviderId(linkedAiProviders.length > 0 ? linkedAiProviders[0].id : null);
+    }
+  }, [selectedProviderId, linkedAiProviders, setSelectedProviderId]);
 
   /* ── Scroll to bottom on new messages ── */
   useEffect(() => {
@@ -218,20 +248,24 @@ export default function ChatPanel() {
             .join(', '),
           enclaveStatus: 'active',
           dynamicSkills,
+          providerId: selectedProviderId ?? undefined,
+          model: selectedProviderId ? PROVIDER_MODELS[selectedProviderId] : undefined,
         }
       );
 
       // If API key is missing or service fallback text is returned, keep local deterministic response.
-      const responseText = aiResponse.toLowerCase().includes('not configured')
-        ? fallback
-        : aiResponse;
+      const lowerResponse = aiResponse.toLowerCase();
+      const responseText =
+        lowerResponse.includes('not configured') || lowerResponse.includes('not yet supported')
+          ? fallback
+          : aiResponse;
       addMessage({ role: 'assistant', content: responseText, stepContext: currentStep });
     } catch {
       addMessage({ role: 'assistant', content: fallback, stepContext: currentStep });
     } finally {
       setTyping(false);
     }
-  }, [currentStep, completedSteps, linkedAccounts, messages, addMessage, setTyping]);
+  }, [currentStep, completedSteps, linkedAccounts, messages, addMessage, setTyping, selectedProviderId]);
 
   const handleSend = useCallback(() => {
     if (!input.trim() || isTyping) return;
@@ -302,19 +336,43 @@ export default function ChatPanel() {
           >
             {/* ── Header ── */}
             <div className="flex-shrink-0 h-14 px-4 flex items-center justify-between border-b border-[rgba(255,255,255,0.06)] bg-[rgba(255,255,255,0.02)]">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-xl bg-[rgba(37,99,235,0.12)] flex items-center justify-center">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="w-8 h-8 rounded-xl bg-[rgba(37,99,235,0.12)] flex items-center justify-center flex-shrink-0">
                   <Bot className="w-4 h-4 text-[#3B82F6]" />
                 </div>
-                <div>
-                  <h3 className="text-[13px] font-semibold text-[#F0F4F8]">Claw</h3>
-                  <div className="flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-[#10B981] animate-pulse" />
-                    <span className="text-[10px] text-[#64748B]">AI Workspace Assistant</span>
-                  </div>
+                <div className="min-w-0">
+                  <h3 className="text-[13px] font-semibold text-[#F0F4F8] leading-tight">Claw</h3>
+                  {linkedAiProviders.length > 0 ? (
+                    <Select
+                      value={selectedProviderId ?? ''}
+                      onValueChange={(value) => setSelectedProviderId(value)}
+                    >
+                      <SelectTrigger
+                        className="h-5 text-[10px] border-0 bg-transparent p-0 pr-4 text-[#64748B] hover:text-[#94A3B8] focus:ring-0 focus:ring-offset-0 shadow-none gap-1 w-auto [&>svg]:size-3"
+                      >
+                        <SelectValue placeholder="Select model" />
+                      </SelectTrigger>
+                      <SelectContent className="z-50 bg-[#0F172A] border-[rgba(255,255,255,0.08)] text-[#F0F4F8]">
+                        {linkedAiProviders.map((p) => (
+                          <SelectItem
+                            key={p.id}
+                            value={p.id}
+                            className="text-[11px] text-[#94A3B8] focus:bg-[rgba(37,99,235,0.12)] focus:text-[#F0F4F8] cursor-pointer"
+                          >
+                            {p.name} / {PROVIDER_MODELS[p.id] ?? p.id}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <div className="flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-[#10B981] animate-pulse" />
+                      <span className="text-[10px] text-[#64748B]">AI Workspace Assistant</span>
+                    </div>
+                  )}
                 </div>
               </div>
-              <div className="flex items-center gap-0.5">
+              <div className="flex items-center gap-0.5 flex-shrink-0">
                 <button
                   onClick={() => useChatStore.getState().clearHistory()}
                   className="p-2 rounded-lg text-[#475569] hover:text-[#94A3B8] hover:bg-[rgba(255,255,255,0.04)] transition-all"

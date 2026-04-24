@@ -7,3 +7,6 @@ release/package.json,updated,active,"Reduced to metadata-only release app manife
 .changelog/reports-notes/,updated,active,"Added audit report and folder guidance","Establish evidence trail for release and CI fixes",2026-04-23
 .agents/README.md,added,active,"Added fast AI navigation entrypoint","Reduce time-to-context for automated maintenance",2026-04-23
 .agents/SKILL/,added,active,"Added changelog maintenance skill with hooks and slash command","Enable repeatable AI-driven changelog workflows",2026-04-23
+src/store/chatStore.ts,updated,active,"Added selectedProviderId state for chat AI provider selection","Enable per-chat provider/model selection UI",2026-04-23
+src/lib/aiService.ts,updated,active,"Added providerId and model parameters to sendMessage","Support routing chat requests to configured provider/model",2026-04-23
+src/components/ChatPanel.tsx,updated,active,"Added linked AI provider model dropdown in chat header","Surface connected provider/model and allow user selection",2026-04-23

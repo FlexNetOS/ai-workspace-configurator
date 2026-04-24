@@ -31,6 +31,7 @@ interface ChatState {
   isTyping: boolean;
   suggestedPrompts: string[];
   lastContextStep: number;
+  selectedProviderId: string | null;
 
   toggle: () => void;
   open: () => void;
@@ -40,6 +41,7 @@ interface ChatState {
   setSuggestedPrompts: (prompts: string[]) => void;
   updateMemory: (patch: Partial<ChatMemory>) => void;
   clearHistory: () => void;
+  setSelectedProviderId: (id: string | null) => void;
 }
 
 const generateId = () => Math.random().toString(36).slice(2, 10);
@@ -69,6 +71,7 @@ const useChatStore = create<ChatState>()(
         "Which accounts do I need?",
       ],
       lastContextStep: 1,
+      selectedProviderId: null,
 
       toggle: () => set((s) => ({ isOpen: !s.isOpen })),
       open: () => set({ isOpen: true }),
@@ -103,6 +106,7 @@ const useChatStore = create<ChatState>()(
             },
           ],
         }),
+      setSelectedProviderId: (id) => set({ selectedProviderId: id }),
     }),
     {
       name: 'workspace_chat_state',
@@ -111,6 +115,7 @@ const useChatStore = create<ChatState>()(
         messages: state.messages.slice(-100), // Keep last 100 messages
         memory: state.memory,
         lastContextStep: state.lastContextStep,
+        selectedProviderId: state.selectedProviderId,
       }),
     }
   )

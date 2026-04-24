@@ -32,8 +32,17 @@ export const sendMessage = async (
     accounts: string; 
     enclaveStatus: string;
     dynamicSkills?: string;
+    providerId?: string;
+    model?: string;
   }
 ) => {
+  const providerId = context.providerId ?? 'google_gemini';
+  const model = context.model ?? 'gemini-3-flash-preview';
+
+  if (providerId !== 'google_gemini') {
+    return `Provider "${providerId}" is not yet supported for chat. Please connect Google Gemini or use the local assistant.`;
+  }
+
   const ai = getAiClient();
   if (!ai) {
     return "Gemini API key is not configured. Set VITE_GEMINI_API_KEY to enable AI responses.";
@@ -65,7 +74,7 @@ export const sendMessage = async (
 
   try {
     const chatResponse = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
+      model,
       contents: messages.map(m => ({
         role: m.role,
         parts: [{ text: m.text }]

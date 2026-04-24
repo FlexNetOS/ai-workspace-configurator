@@ -6,6 +6,8 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and ver
 ## [Unreleased]
 
 ### Added
+- Added model dropdown to Chat UI header that displays connected AI providers and their models after verification.
+- Added `selectedProviderId` to chat store to persist the user's chosen chat provider.
 - Added external Electron builder config at `release/electron-builder.yml`.
 - Added `.changelog` documentation and audit structure:
   - `.changelog/README.md`
