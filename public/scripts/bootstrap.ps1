@@ -27,7 +27,7 @@ param(
 $ErrorActionPreference = "Stop"
 $ProgressPreference = "Continue"
 
-$ScriptRevision = "77af65c"
+$ScriptRevision = "76901fb"
 
 # Canonical hosted scripts base (used if companion scripts are missing locally)
 # Prefer raw GitHub URLs so script updates take effect immediately (no GitHub Pages rebuild lag).

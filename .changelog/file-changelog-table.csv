@@ -38,3 +38,5 @@ public/scripts/InstallStack.ps1,updated,active,"Remove Docker Desktop from gener
 public/scripts/bootstrap.cmd,updated,active,"Add visible script revision + cache-busting raw download headers for bootstrap.ps1","Make it easy to verify which launcher version is running and avoid stale caching without requiring tags",2026-04-24
 public/scripts/bootstrap.ps1,updated,active,"Add visible script revision + cache-busting for companion script downloads","Prevent stale cached scripts from persisting across runs and make version verification obvious",2026-04-24
 public/scripts/bootstrap.cmd,updated,active,"Always refresh bootstrap.ps1 next to the launcher before running","Prevent stale bootstrap.ps1 from persisting in %TEMP% across runs",2026-04-24
+public/scripts/bootstrap.cmd,updated,active,"Update displayed launcher revision string","Make it obvious when users have pulled the latest bootstrap.cmd",2026-04-24
+public/scripts/bootstrap.ps1,updated,active,"Update displayed script revision string","Make it obvious when users have pulled the latest bootstrap.ps1",2026-04-24
