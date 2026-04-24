@@ -3,6 +3,7 @@ dist
 dist-electron
 .DS_Store
 release/package-lock.json
+release/node_modules
 tsbuildinfo
 coverage
 playwright-report

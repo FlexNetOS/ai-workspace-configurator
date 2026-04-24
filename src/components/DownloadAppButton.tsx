@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Download, Check, Monitor, Zap, ExternalLink,
   Github, FileArchive, Terminal, AlertTriangle, Copy,
-  Rocket, Code2, BookOpen
+  Rocket, Code2
 } from 'lucide-react';
 
 interface DownloadOption {
@@ -48,13 +48,13 @@ const downloadOptions: DownloadOption[] = [
     url: '/scripts/bootstrap.ps1',
   },
   {
-    id: 'desktop-coming',
+    id: 'desktop-app',
     name: 'Desktop App (.exe)',
-    description: 'Full Electron desktop app with native PowerShell bridge. Coming soon — help us release it!',
+    description: 'Full Electron desktop app with native PowerShell bridge. Download from GitHub Releases.',
     size: '~85 MB',
     icon: <Monitor className="w-5 h-5" />,
     action: 'open-guide',
-    badge: 'Coming Soon',
+    badge: 'Windows',
   },
 ];
 
@@ -124,7 +124,7 @@ export function DownloadAppModal({ isOpen, onClose }: { isOpen: boolean; onClose
               const url = URL.createObjectURL(blob);
               const a = document.createElement('a');
               a.href = url;
-              a.download = 'ai-workspace-scripts-v3.6.0.zip';
+              a.download = `ai-workspace-scripts-v${__APP_VERSION__}.zip`;
               a.click();
               URL.revokeObjectURL(url);
               setDownloaded(option.id);
@@ -170,7 +170,7 @@ export function DownloadAppModal({ isOpen, onClose }: { isOpen: boolean; onClose
                 </div>
                 <div>
                   <h2 className="text-[18px] font-bold text-[#F0F4F8]">Get AI Workspace Configurator</h2>
-                  <p className="text-[12px] text-[#64748B]">Version 3.6.0 • Multiple ways to install</p>
+                  <p className="text-[12px] text-[#64748B]">Version {__APP_VERSION__} • Multiple ways to install</p>
                 </div>
               </div>
 
@@ -229,8 +229,6 @@ export function DownloadAppModal({ isOpen, onClose }: { isOpen: boolean; onClose
                       className={`relative flex items-start gap-3 p-4 rounded-xl border transition-all cursor-pointer ${
                         opt.recommended
                           ? 'border-[rgba(37,99,235,0.3)] bg-[rgba(37,99,235,0.04)]'
-                          : opt.id === 'desktop-coming'
-                          ? 'border-[rgba(255,255,255,0.04)] bg-[rgba(255,255,255,0.02)] opacity-70'
                           : 'border-[rgba(255,255,255,0.06)] bg-[rgba(255,255,255,0.02)] hover:border-[rgba(255,255,255,0.12)]'
                       }`}
                       onClick={() => handleAction(opt)}
@@ -242,9 +240,7 @@ export function DownloadAppModal({ isOpen, onClose }: { isOpen: boolean; onClose
                       )}
                       {opt.badge && !opt.recommended && (
                         <span className={`absolute -top-2 left-4 px-2 py-0.5 rounded-full text-[9px] font-bold ${
-                          opt.id === 'desktop-coming'
-                            ? 'bg-[rgba(100,116,139,0.2)] text-[#94A3B8]'
-                            : 'bg-[rgba(6,182,212,0.2)] text-[#06B6D4]'
+                          'bg-[rgba(6,182,212,0.2)] text-[#06B6D4]'
                         }`}>
                           {opt.badge}
                         </span>
@@ -347,20 +343,19 @@ export function DownloadAppModal({ isOpen, onClose }: { isOpen: boolean; onClose
                     <div className="flex items-start gap-3">
                       <Github className="w-5 h-5 text-[#A78BFA] flex-shrink-0 mt-0.5" />
                       <div>
-                        <p className="text-[12px] font-semibold text-[#A78BFA]">Want the Desktop App?</p>
+                        <p className="text-[12px] font-semibold text-[#A78BFA]">Desktop App Available</p>
                         <p className="text-[11px] text-[#94A3B8] mt-1">
-                          The full Electron desktop app with native PowerShell integration is ready but needs to be published to GitHub Releases.
-                          Push the code to your GitHub repo and run the release workflow.
+                          The full Electron desktop app with native PowerShell integration is available on GitHub Releases.
+                          Download the Portable or Setup version for the best experience.
                         </p>
                         <a
-                          href="https://github.com/FlexNetOS/ai-workspace-configurator"
+                          href="https://github.com/FlexNetOS/ai-workspace-configurator/releases/latest"
                           target="_blank"
                           rel="noopener noreferrer"
                           className="inline-flex items-center gap-1 mt-2 text-[11px] text-[#3B82F6] hover:text-[#60A5FA]"
                         >
-                          <BookOpen className="w-3 h-3" />
-                          View source on GitHub
                           <ExternalLink className="w-3 h-3" />
+                          Download latest release
                         </a>
                       </div>
                     </div>

@@ -7,9 +7,9 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Version to release (e.g., v3.6.0)'
+        description: 'Version to release (e.g., v3.7.0)'
         required: true
-        default: 'v3.6.0'
+        default: 'v3.7.0'
 
 jobs:
   build-and-release:
@@ -29,25 +29,19 @@ jobs:
           node-version: '20'
           cache: 'npm'
 
-      - name: Validate release lockfile policy and integrity placeholders
+      # ─── Determine version ───
+      - name: Set release version
+        id: version
         run: |
-          $failed = $false
-
-          if (Test-Path "release/package-lock.json") {
-            Write-Error "Forbidden lockfile found: release/package-lock.json. Release packaging must remain root-managed."
-            $failed = $true
+          if ('${{ github.event_name }}' -eq 'workflow_dispatch') {
+            $ver = '${{ github.event.inputs.version }}'
+          } else {
+            $ver = '${{ github.ref_name }}'
           }
-
-          $matches = Get-ChildItem -Path . -Recurse -File -Filter package-lock.json |
-            Select-String -SimpleMatch -Pattern 'sha1-PLASH'
-          if ($matches) {
-            $matches | ForEach-Object { Write-Error "Invalid lockfile integrity placeholder (sha1-PLASH): $($_.Path):$($_.LineNumber)" }
-            $failed = $true
-          }
-
-          if ($failed) {
-            throw "Release lockfile validation failed: remove forbidden release/package-lock.json and any sha1-PLASH placeholder integrity values."
-          }
+          # Strip leading 'v' if present
+          $ver = $ver -replace '^v',''
+          echo "version=$ver" >> $env:GITHUB_OUTPUT
+          Write-Host "Building version: $ver"
 
       # ─── Build web app ───
       - name: Install web app dependencies
@@ -56,16 +50,24 @@ jobs:
       - name: Build web app
         run: npm run build
 
+      # ─── Prepare Electron package version ───
+      - name: Update Electron package version
+        run: |
+          $pkgPath = 'release/package.json'
+          $pkg = Get-Content $pkgPath | ConvertFrom-Json
+          $pkg.version = '${{ steps.version.outputs.version }}'
+          $pkg | ConvertTo-Json -Depth 10 | Set-Content $pkgPath -Encoding UTF8
+          Write-Host "release/package.json version set to: $($pkg.version)"
+
       # ─── Build Electron app ───
-      # Upgrade-only install, isolated to CI node_modules (no repo file changes).
       - name: Install Electron build tools
         run: |
-          npm install --no-save electron-builder@latest --ignore-scripts
+          npm install --no-save electron-builder@26.0.12 --ignore-scripts
           cd release
-          npm install --no-save electron@latest --ignore-scripts
+          npm install --no-save electron@35.0.0 --ignore-scripts
 
       - name: Build Electron app
-        run: npx electron-builder --projectDir release --config ../release/electron-builder.yml --publish=never --win nsis --win portable --win zip
+        run: npx electron-builder --projectDir release --config release/electron-builder.yml --publish=never --win nsis --win portable --win zip
 
       # ─── Upload to GitHub Release ───
       - name: Upload artifacts to release

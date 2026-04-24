@@ -12,7 +12,12 @@ const os = require('os');
 // ─── Config ───
 const isDev = process.env.NODE_ENV === 'development';
 const APP_NAME = 'AI Workspace Configurator';
-const APP_VERSION = '3.6.0';
+// Read version from release/package.json (one level up from electron/)
+let APP_VERSION = '0.0.0';
+try {
+  const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'package.json'), 'utf8'));
+  APP_VERSION = pkg.version || APP_VERSION;
+} catch { /* fallback to default */ }
 
 // ─── Single Instance Lock ───
 const gotTheLock = app.requestSingleInstanceLock();
