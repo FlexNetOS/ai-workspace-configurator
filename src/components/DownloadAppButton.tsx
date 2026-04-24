@@ -12,8 +12,9 @@ interface DownloadOption {
   description: string;
   size: string;
   icon: React.ReactNode;
-  action: 'download-ps1' | 'download-zip' | 'copy-command' | 'open-guide';
+  action: 'download-file' | 'download-zip' | 'copy-command' | 'open-guide';
   url?: string;
+  downloadAs?: string;
   recommended?: boolean;
   badge?: string;
 }
@@ -32,7 +33,7 @@ const downloadOptions: DownloadOption[] = [
   {
     id: 'scripts-zip',
     name: 'Setup Scripts Bundle',
-    description: 'All 5 PowerShell scripts + configs in a ZIP. Run bootstrap.ps1 to start.',
+    description: 'All PowerShell scripts + configs in a ZIP. Run bootstrap.cmd to start (recommended).',
     size: '~50 KB',
     icon: <FileArchive className="w-5 h-5" />,
     action: 'download-zip',
@@ -40,12 +41,13 @@ const downloadOptions: DownloadOption[] = [
   },
   {
     id: 'bootstrap-file',
-    name: 'Bootstrap Script Only',
-    description: 'Just the bootstrap.ps1 file. Downloads the rest automatically.',
-    size: '12 KB',
+    name: 'Bootstrap Launcher (Recommended)',
+    description: 'bootstrap.cmd runner that avoids ExecutionPolicy + Mark-of-the-Web issues.',
+    size: '1 KB',
     icon: <Code2 className="w-5 h-5" />,
-    action: 'download-ps1',
-    url: '/scripts/bootstrap.ps1',
+    action: 'download-file',
+    url: '/scripts/bootstrap.cmd',
+    downloadAs: 'bootstrap.cmd',
   },
   {
     id: 'desktop-app',
@@ -59,7 +61,7 @@ const downloadOptions: DownloadOption[] = [
 ];
 
 // The one-liner install command (will work once pushed to GitHub)
-const installCommand = 'irm https://flexnetos.github.io/ai-workspace-configurator/scripts/bootstrap.ps1 | iex';
+const installCommand = "iwr https://flexnetos.github.io/ai-workspace-configurator/scripts/bootstrap.cmd -OutFile $env:TEMP\\ai-workspace-bootstrap.cmd; & $env:TEMP\\ai-workspace-bootstrap.cmd";
 
 export function DownloadAppModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
   const [downloaded, setDownloaded] = useState<string | null>(null);
@@ -75,21 +77,20 @@ export function DownloadAppModal({ isOpen, onClose }: { isOpen: boolean; onClose
         setTimeout(() => { setCopied(false); setDownloaded(null); }, 3000);
         break;
 
-      case 'download-ps1':
-        if (option.url) {
-          fetch(option.url)
-            .then((r) => r.blob())
-            .then((blob) => {
-              const url = URL.createObjectURL(blob);
-              const a = document.createElement('a');
-              a.href = url;
-              a.download = 'bootstrap.ps1';
-              a.click();
-              URL.revokeObjectURL(url);
-            });
-          setDownloaded(option.id);
-          setTimeout(() => setDownloaded(null), 3000);
-        }
+      case 'download-file':
+        if (!option.url) break;
+        fetch(option.url)
+          .then((r) => r.blob())
+          .then((blob) => {
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = option.downloadAs ?? 'download';
+            a.click();
+            URL.revokeObjectURL(url);
+          });
+        setDownloaded(option.id);
+        setTimeout(() => setDownloaded(null), 3000);
         break;
 
       case 'download-zip': {
@@ -98,6 +99,7 @@ export function DownloadAppModal({ isOpen, onClose }: { isOpen: boolean; onClose
           const JSZip = JSZipModule.default;
           const zip = new JSZip();
           const scripts = [
+            'bootstrap.cmd',
             'bootstrap.ps1',
             'SecurityCheck.ps1',
             'HardwareScan.ps1',

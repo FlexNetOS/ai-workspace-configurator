@@ -10,3 +10,9 @@ release/package.json,updated,active,"Reduced to metadata-only release app manife
 src/store/chatStore.ts,updated,active,"Added selectedProviderId state for chat AI provider selection","Enable per-chat provider/model selection UI",2026-04-23
 src/lib/aiService.ts,updated,active,"Added providerId and model parameters to sendMessage","Support routing chat requests to configured provider/model",2026-04-23
 src/components/ChatPanel.tsx,updated,active,"Added linked AI provider model dropdown in chat header","Surface connected provider/model and allow user selection",2026-04-23
+public/scripts/bootstrap.cmd,added,active,"Added bootstrap.cmd launcher to run bootstrap.ps1 with auto-elevation and ExecutionPolicy Bypass","Prevent Mark-of-the-Web and execution policy blocks from breaking first-run setup",2026-04-24
+public/scripts/bootstrap.ps1,updated,active,"Added companion script sync (copy/download) and Mode gating for CheckOnly/InstallOnly","Make bootstrap resilient when scripts are missing and support safe preflight-only runs",2026-04-24
+public/scripts/Install-App.ps1,updated,active,"Removed iex-based elevation path; added file-based relaunch and pwsh-compatible web requests","Avoid unsafe pipe-to-iex patterns and improve compatibility across PowerShell versions",2026-04-24
+src/components/DownloadAppButton.tsx,updated,active,"Updated download options and one-liner to use bootstrap.cmd instead of pipe-to-iex","Ensure install/download guidance works under default Windows execution policy indefinitely",2026-04-24
+src/components/ScriptPanel.tsx,updated,active,"Added bootstrap.cmd to scripts list and updated how-to guidance away from Set-ExecutionPolicy","Keep setup flow working without changing system-wide execution policy settings",2026-04-24
+src/components/AutoDiscoveryPanel.tsx,updated,active,"Replaced external pipe-to-iex command with official bootstrap.cmd CheckOnly command","Keep scans functional without unsafe execution patterns",2026-04-24

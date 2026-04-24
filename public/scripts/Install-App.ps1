@@ -8,7 +8,7 @@
     https://github.com/FlexNetOS/ai-workspace-configurator
 .EXAMPLE
     # One-liner (run in PowerShell):
-    irm https://raw.githubusercontent.com/FlexNetOS/ai-workspace-configurator/main/public/scripts/Install-App.ps1 | iex
+    $p = Join-Path $env:TEMP 'AIWS-Install-App.ps1'; iwr https://raw.githubusercontent.com/FlexNetOS/ai-workspace-configurator/main/public/scripts/Install-App.ps1 -OutFile $p; Unblock-File $p; powershell -NoProfile -ExecutionPolicy Bypass -File $p
 #>
 param(
     [string]$InstallPath = "$env:LOCALAPPDATA\AI-Workspace-Configurator",
@@ -37,7 +37,25 @@ $isAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIden
 if (-not $isAdmin) {
     Write-Host "[Elevate] Requesting Administrator privileges..." -ForegroundColor Yellow
     $scriptUrl = "https://raw.githubusercontent.com/FlexNetOS/ai-workspace-configurator/main/public/scripts/Install-App.ps1"
-    Start-Process powershell -Verb RunAs -ArgumentList "-NoProfile -ExecutionPolicy Bypass -Command `"irm '$scriptUrl' | iex`"" -Wait
+
+    $scriptPath = $PSCommandPath
+    if ([string]::IsNullOrWhiteSpace($scriptPath)) {
+        $scriptPath = Join-Path $env:TEMP "AIWS-Install-App.ps1"
+        Invoke-WebRequest -Uri $scriptUrl -OutFile $scriptPath -MaximumRedirection 10
+        Unblock-File -Path $scriptPath -ErrorAction SilentlyContinue
+    }
+
+    $argList = @(
+        "-NoProfile",
+        "-ExecutionPolicy", "Bypass",
+        "-File", $scriptPath,
+        "-InstallPath", $InstallPath,
+        "-Version", $Version
+    )
+    if ($DesktopShortcut) { $argList += "-DesktopShortcut" }
+    if ($NoLaunch) { $argList += "-NoLaunch" }
+
+    Start-Process powershell -Verb RunAs -ArgumentList $argList -Wait
     exit
 }
 
@@ -53,9 +71,9 @@ Write-Host "      OK: $InstallPath" -ForegroundColor Green
 # ─── Determine download URL ───
 Write-Host "[2/6] Resolving download URL..." -ForegroundColor Cyan
 if ($Version -eq "latest") {
-    $releaseUrl = "https://api.github.com/repos/FlexNetOS/ai-workspace-configurator/releases/latest"
+        $releaseUrl = "https://api.github.com/repos/FlexNetOS/ai-workspace-configurator/releases/latest"
     try {
-        $release = Invoke-RestMethod -Uri $releaseUrl -UseBasicParsing
+        $release = Invoke-RestMethod -Uri $releaseUrl
         $asset = $release.assets | Where-Object { $_.name -match "win.*\.zip$" } | Select-Object -First 1
         if (-not $asset) {
             throw "No ZIP asset found in latest release"
@@ -78,7 +96,7 @@ Write-Host "      From: $downloadUrl" -ForegroundColor Gray
 Write-Host "      To: $zipPath" -ForegroundColor Gray
 
 try {
-    Invoke-WebRequest -Uri $downloadUrl -OutFile $zipPath -UseBasicParsing -MaximumRedirection 10
+    Invoke-WebRequest -Uri $downloadUrl -OutFile $zipPath -MaximumRedirection 10
     $size = (Get-Item $zipPath).Length / 1MB
     Write-Host "      Downloaded: $([math]::Round($size, 1)) MB" -ForegroundColor Green
 } catch {

@@ -19,6 +19,17 @@ interface ScriptDef {
 
 const scripts: ScriptDef[] = [
   {
+    id: 'bootstrap-cmd',
+    name: 'Bootstrap Launcher (Recommended)',
+    description: 'Runs bootstrap.ps1 with ExecutionPolicy Bypass and auto-elevation.',
+    filename: 'bootstrap.cmd',
+    size: '1.0 KB',
+    icon: <Zap className="w-5 h-5" />,
+    category: 'Core',
+    requiresAdmin: false,
+    purpose: 'Preferred entry point on Windows to avoid Mark-of-the-Web execution blocks',
+  },
+  {
     id: 'bootstrap',
     name: 'Master Bootstrap',
     description: 'One-click full setup. Runs all phases automatically.',
@@ -114,7 +125,7 @@ function DownloadButton({ filename, label }: { filename: string; label: string }
   const [downloaded, setDownloaded] = useState(false);
 
   const handleDownload = async () => {
-    const isScript = filename.endsWith('.ps1');
+    const isScript = filename.endsWith('.ps1') || filename.endsWith('.cmd');
     const prefix = isScript ? '/scripts/' : '/configs/';
     try {
       const resp = await fetch(prefix + filename);
@@ -276,9 +287,9 @@ export default function ScriptPanel() {
               },
               {
                 step: 2,
-                title: 'Enable PowerShell Execution Policy',
-                desc: 'Allow scripts to run (one-time setup):',
-                cmd: 'Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser',
+                title: 'Run the Bootstrap Launcher',
+                desc: 'No execution policy changes needed. This launcher auto-elevates and bypasses Mark-of-the-Web blocks:',
+                cmd: '.\\bootstrap.cmd',
               },
               {
                 step: 3,
@@ -290,7 +301,7 @@ export default function ScriptPanel() {
                 step: 4,
                 title: 'Run Full Setup',
                 desc: 'Let the bootstrap handle everything (30-60 minutes):',
-                cmd: '.\\bootstrap.ps1',
+                cmd: '.\\bootstrap.cmd -Mode Full',
               },
               {
                 step: 5,
@@ -321,10 +332,10 @@ export default function ScriptPanel() {
                 <h4 className="text-[14px] font-semibold text-[#10B981]">One-Liner (Advanced)</h4>
               </div>
               <code className="block p-3 rounded-lg bg-[#050A18] border border-[rgba(255,255,255,0.06)] text-[#67E8F9] text-[11px] font-mono break-all">
-                irm https://your-domain.com/bootstrap.ps1 | iex
+                iwr https://flexnetos.github.io/ai-workspace-configurator/scripts/bootstrap.cmd -OutFile $env:TEMP\ai-workspace-bootstrap.cmd; & $env:TEMP\ai-workspace-bootstrap.cmd
               </code>
               <p className="text-[11px] text-[#475569] mt-2">
-                Downloads and runs the bootstrap directly. Only use from trusted sources.
+                Downloads and runs the bootstrap launcher. Only use from trusted sources.
               </p>
             </div>
           </motion.div>

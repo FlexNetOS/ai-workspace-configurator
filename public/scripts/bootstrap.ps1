@@ -8,11 +8,11 @@
     runs security checks, creates a system restore point, and executes the full install.
     SAFE to run multiple times (idempotent).
 .EXAMPLE
-    # Download and run directly from GitHub:
-    irm https://your-domain.com/bootstrap.ps1 | iex
+    # Recommended on Windows (avoids ExecutionPolicy + Mark-of-the-Web issues):
+    .\bootstrap.cmd
 
     # Or save and run:
-    .\bootstrap.ps1 -NonInteractive
+    pwsh -NoProfile -ExecutionPolicy Bypass -File .\bootstrap.ps1 -NonInteractive
 #>
 param(
     [ValidateSet("Full","CheckOnly","InstallOnly")]
@@ -25,6 +25,9 @@ param(
 
 $ErrorActionPreference = "Stop"
 $ProgressPreference = "Continue"
+
+# Canonical hosted scripts base (used if companion scripts are missing locally)
+$ScriptsBaseUrl = "https://flexnetos.github.io/ai-workspace-configurator/scripts"
 
 # ─── Banner ───
 Write-Host @"
@@ -42,10 +45,35 @@ $dirs = @("$WorkspaceDir\logs", "$WorkspaceDir\artifacts", "$WorkspaceDir\script
 foreach ($d in $dirs) { if (-not (Test-Path $d)) { New-Item -ItemType Directory -Path $d -Force | Out-Null } }
 Write-Host "      Directories ready" -ForegroundColor Green
 
+# Ensure companion scripts exist in $WorkspaceDir\scripts (copy from local bundle or download)
+Write-Host "      Syncing companion scripts..." -ForegroundColor Gray
+$companionScripts = @("SecurityCheck.ps1", "HardwareScan.ps1", "VhdxManager.ps1", "InstallStack.ps1")
+foreach ($name in $companionScripts) {
+    $dest = Join-Path "$WorkspaceDir\scripts" $name
+    if (Test-Path $dest) { continue }
+
+    $local = if ($PSScriptRoot) { Join-Path $PSScriptRoot $name } else { $null }
+    if ($local -and (Test-Path $local)) {
+        Copy-Item -Path $local -Destination $dest -Force
+        Unblock-File -Path $dest -ErrorAction SilentlyContinue
+        continue
+    }
+
+    $url = "$ScriptsBaseUrl/$name"
+    try {
+        Invoke-WebRequest -Uri $url -OutFile $dest -MaximumRedirection 10
+        Unblock-File -Path $dest -ErrorAction SilentlyContinue
+    } catch {
+        Write-Host "      Warning: Failed to fetch $name from $url" -ForegroundColor Yellow
+    }
+}
+
 # ─── Step 1: Security Check ───
 Write-Host "`n[1/5] Running security & readiness checks..." -ForegroundColor Cyan
 $secScript = "$WorkspaceDir\scripts\SecurityCheck.ps1"
-if (Test-Path $secScript) {
+if ($Mode -notin @("Full", "CheckOnly")) {
+    Write-Host "      Skipping (Mode=$Mode)" -ForegroundColor Gray
+} elseif (Test-Path $secScript) {
     & $secScript -OutputPath "$WorkspaceDir\artifacts\security-report.json"
 } else {
     Write-Host "      Security script not found. Skipping." -ForegroundColor Yellow
@@ -64,18 +92,27 @@ try {
 # ─── Step 3: Hardware Scan ───
 Write-Host "`n[3/5] Scanning hardware..." -ForegroundColor Cyan
 $hwScript = "$WorkspaceDir\scripts\HardwareScan.ps1"
-if (Test-Path $hwScript) {
+if ($Mode -notin @("Full", "CheckOnly")) {
+    Write-Host "      Skipping (Mode=$Mode)" -ForegroundColor Gray
+} elseif (Test-Path $hwScript) {
     & $hwScript -OutputPath "$WorkspaceDir\artifacts\hardware-inventory.json" -Silent
 } else {
     Write-Host "      Hardware scanner not found. Skipping." -ForegroundColor Yellow
 }
 
 # ─── Step 4: Run Full Install ───
-Write-Host "`n[4/5] Installing workspace stack (this will take 30-60 minutes)..." -ForegroundColor Cyan
-Write-Host "      Phases: PowerShell → Updates → winget → Docker → WSL → Ubuntu → Zsh → ZED → Kimi → llama.cpp → Models" -ForegroundColor Gray
+if ($Mode -in @("Full", "InstallOnly")) {
+    Write-Host "`n[4/5] Installing workspace stack (this will take 30-60 minutes)..." -ForegroundColor Cyan
+    Write-Host "      Phases: PowerShell → Updates → winget → Docker → WSL → Ubuntu → Zsh → ZED → Kimi → llama.cpp → Models" -ForegroundColor Gray
+} else {
+    Write-Host "`n[4/5] Installing workspace stack..." -ForegroundColor Cyan
+    Write-Host "      Skipping (Mode=$Mode)" -ForegroundColor Gray
+}
 
 $installScript = "$WorkspaceDir\scripts\InstallStack.ps1"
-if (Test-Path $installScript) {
+if ($Mode -notin @("Full", "InstallOnly")) {
+    # Already reported as skipped above.
+} elseif (Test-Path $installScript) {
     & $installScript -Phase All -Verbose
 } else {
     Write-Host "      Install script not found. Skipping." -ForegroundColor Yellow

@@ -386,7 +386,9 @@ export default function AutoDiscoveryPanel() {
               <span className="text-[10px] text-[#475569] uppercase tracking-wider">Copy this command</span>
               <button
                 onClick={() => {
-                  navigator.clipboard.writeText(`irm https://ewfru767svbxc.kimi.show/scripts/SecurityCheck.ps1 | iex`);
+                  navigator.clipboard.writeText(
+                    'iwr https://flexnetos.github.io/ai-workspace-configurator/scripts/bootstrap.cmd -OutFile $env:TEMP\\aiws-bootstrap.cmd; & $env:TEMP\\aiws-bootstrap.cmd -Mode CheckOnly'
+                  );
                   setCopied(true);
                   setTimeout(() => setCopied(false), 2000);
                 }}
@@ -397,7 +399,7 @@ export default function AutoDiscoveryPanel() {
               </button>
             </div>
             <code className="block text-[12px] text-[#67E8F9] font-mono leading-relaxed">
-              irm https://ewfru767svbxc.kimi.show/scripts/SecurityCheck.ps1 | iex
+              iwr https://flexnetos.github.io/ai-workspace-configurator/scripts/bootstrap.cmd -OutFile $env:TEMP\aiws-bootstrap.cmd; &amp; $env:TEMP\aiws-bootstrap.cmd -Mode CheckOnly
             </code>
           </div>
 
