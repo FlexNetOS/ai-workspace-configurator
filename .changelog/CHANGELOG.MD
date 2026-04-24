@@ -35,6 +35,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and ver
 - Fixed packaging path assumptions by bundling scripts/configs into locations expected by `release/electron/main.js`.
 - Fixed bootstrap flow to sync missing companion scripts (copy from bundle or download) and respect `-Mode` for `CheckOnly`/`InstallOnly`.
 - Fixed `Install-App.ps1` elevation path to re-launch via `-File` instead of pipe-to-iex and removed `-UseBasicParsing` for pwsh compatibility.
+- Fixed default VHDX/WSL directory behavior so choosing a workspace drive (e.g. `F:\`) keeps state under that workspace instead of creating `C:\Users\<user>\WSL` by default.
 
 ### Removed
 - Removed dependency on `release/package-lock.json` and release-local `npm install` flow.

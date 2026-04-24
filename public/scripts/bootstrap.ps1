@@ -29,6 +29,12 @@ $ProgressPreference = "Continue"
 # Canonical hosted scripts base (used if companion scripts are missing locally)
 $ScriptsBaseUrl = "https://flexnetos.github.io/ai-workspace-configurator/scripts"
 
+# If the user didn’t provide a VHDX path, default it under the workspace dir to keep state together.
+if (-not $PSBoundParameters.ContainsKey("VhdxPath")) {
+    $VhdxPath = Join-Path $WorkspaceDir "wsl\\workspace.vhdx"
+}
+$wslDir = Split-Path -Parent $VhdxPath
+
 # ─── Banner ───
 Write-Host @"
 ╔══════════════════════════════════════════════════════════════════╗
@@ -45,7 +51,7 @@ if ($Mode -eq "CheckOnly") {
 
 # ─── Step 0: Environment Setup ───
 Write-Host "`n[0/5] Setting up workspace directories..." -ForegroundColor Cyan
-$dirs = @("$WorkspaceDir\logs", "$WorkspaceDir\artifacts", "$WorkspaceDir\scripts", "$env:USERPROFILE\WSL")
+$dirs = @("$WorkspaceDir\logs", "$WorkspaceDir\artifacts", "$WorkspaceDir\scripts", $wslDir)
 foreach ($d in $dirs) { if (-not (Test-Path $d)) { New-Item -ItemType Directory -Path $d -Force | Out-Null } }
 Write-Host "      Directories ready" -ForegroundColor Green
 

@@ -23,3 +23,4 @@ src/components/ScriptPanel.tsx,updated,active,"Updated how-to steps to explicitl
 src/components/AutoDiscoveryPanel.tsx,updated,active,"Updated copy to identify Preflight/CheckOnly as safe scan mode","Align UI language with preflight-first workflow",2026-04-24
 docs/win11-pro-pwsh-commands.md,updated,active,"Documented that bootstrap.cmd defaults to Preflight (CheckOnly)","Keep docs aligned with durable launcher behavior",2026-04-24
 docs/win11-pro-settings.md,updated,active,"Added Preflight/Install notes for bootstrap.cmd to settings checklist","Make baseline setup guidance match preflight-first path",2026-04-24
+public/scripts/bootstrap.ps1,updated,active,"Default VHDX path under WorkspaceDir when not provided and create WSL dir from VhdxPath","Keep all mutable state under the chosen workspace drive and avoid unexpected C:\\Users\\<user>\\WSL folders",2026-04-24
