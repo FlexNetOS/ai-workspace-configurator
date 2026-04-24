@@ -67,7 +67,7 @@ jobs:
           npm install --no-save electron@35.0.0 --ignore-scripts
 
       - name: Build Electron app
-        run: npx electron-builder --projectDir release --config release/electron-builder.yml --publish=never --win nsis --win portable --win zip
+        run: npx electron-builder --projectDir release --config electron-builder.yml --publish=never --win nsis --win portable --win zip
 
       # ─── Upload to GitHub Release ───
       - name: Upload artifacts to release
