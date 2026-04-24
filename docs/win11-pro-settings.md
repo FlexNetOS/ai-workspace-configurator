@@ -48,6 +48,8 @@ Windows defaults typically report as:
 
 The project’s durable approach is **not** to change policy, but to use the included launcher:
 - `bootstrap.cmd` (auto-elevates + runs `bootstrap.ps1` with `-ExecutionPolicy Bypass`)
+  - Default behavior: **Preflight** (`-Mode CheckOnly`)
+  - Install behavior: `.\bootstrap.cmd -Mode Full`
 
 Verify policy and source:
 

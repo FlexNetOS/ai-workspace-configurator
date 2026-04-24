@@ -9,6 +9,8 @@ This project ships a `bootstrap.cmd` launcher that:
 - runs `bootstrap.ps1` with `-ExecutionPolicy Bypass`
 - avoids MOTW/RemoteSigned friction for downloaded scripts
 
+By default, `bootstrap.cmd` runs **Preflight** (`-Mode CheckOnly`). To install, pass `-Mode Full` explicitly.
+
 From an elevated PowerShell:
 
 ```powershell

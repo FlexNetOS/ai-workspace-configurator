@@ -373,10 +373,10 @@ export default function AutoDiscoveryPanel() {
           <div className="flex items-start gap-3 mb-3">
             <Terminal className="w-5 h-5 text-[#F59E0B] flex-shrink-0 mt-0.5" />
             <div>
-              <h4 className="text-[14px] font-semibold text-[#F0F4F8]">Need a deeper scan?</h4>
+              <h4 className="text-[14px] font-semibold text-[#F0F4F8]">Run Preflight (Recommended)</h4>
               <p className="text-[12px] text-[#94A3B8] mt-1 leading-relaxed">
-                Some checks (admin rights, disk space) require a quick PowerShell script. 
-                This is safe — it only reads system info, never changes anything.
+                Some checks (admin rights, disk space) require a quick PowerShell script.
+                This is safe — it runs in CheckOnly mode and won&apos;t install anything.
               </p>
             </div>
           </div>

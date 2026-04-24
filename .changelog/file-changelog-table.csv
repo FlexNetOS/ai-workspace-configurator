@@ -16,3 +16,10 @@ public/scripts/Install-App.ps1,updated,active,"Removed iex-based elevation path;
 src/components/DownloadAppButton.tsx,updated,active,"Updated download options and one-liner to use bootstrap.cmd instead of pipe-to-iex","Ensure install/download guidance works under default Windows execution policy indefinitely",2026-04-24
 src/components/ScriptPanel.tsx,updated,active,"Added bootstrap.cmd to scripts list and updated how-to guidance away from Set-ExecutionPolicy","Keep setup flow working without changing system-wide execution policy settings",2026-04-24
 src/components/AutoDiscoveryPanel.tsx,updated,active,"Replaced external pipe-to-iex command with official bootstrap.cmd CheckOnly command","Keep scans functional without unsafe execution patterns",2026-04-24
+public/scripts/bootstrap.cmd,updated,active,"Default bootstrap.cmd to Preflight (CheckOnly) when no args provided","Make safe preflight the default path instead of accidental full install",2026-04-24
+public/scripts/bootstrap.ps1,updated,active,"Print clear Preflight banner when running in CheckOnly","Make CheckOnly mode obvious during runs and in logs",2026-04-24
+src/components/DownloadAppButton.tsx,updated,active,"Updated one-liner to run Preflight (CheckOnly) by default","Ensure the fastest install path starts with a safe preflight",2026-04-24
+src/components/ScriptPanel.tsx,updated,active,"Updated how-to steps to explicitly call out Preflight first","Make recommended flow preflight-first and reduce user mistakes",2026-04-24
+src/components/AutoDiscoveryPanel.tsx,updated,active,"Updated copy to identify Preflight/CheckOnly as safe scan mode","Align UI language with preflight-first workflow",2026-04-24
+docs/win11-pro-pwsh-commands.md,updated,active,"Documented that bootstrap.cmd defaults to Preflight (CheckOnly)","Keep docs aligned with durable launcher behavior",2026-04-24
+docs/win11-pro-settings.md,updated,active,"Added Preflight/Install notes for bootstrap.cmd to settings checklist","Make baseline setup guidance match preflight-first path",2026-04-24

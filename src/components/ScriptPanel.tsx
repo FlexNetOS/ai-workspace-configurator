@@ -287,20 +287,20 @@ export default function ScriptPanel() {
               },
               {
                 step: 2,
-                title: 'Run the Bootstrap Launcher',
-                desc: 'No execution policy changes needed. This launcher auto-elevates and bypasses Mark-of-the-Web blocks:',
+                title: 'Run Preflight (Recommended)',
+                desc: 'No execution policy changes needed. This launcher auto-elevates and runs CheckOnly first:',
                 cmd: '.\\bootstrap.cmd',
               },
               {
                 step: 3,
-                title: 'Run Security Check First',
-                desc: 'Validate your system before installing anything:',
-                cmd: '.\\SecurityCheck.ps1 -Fix',
+                title: 'Review Results',
+                desc: 'Check artifacts/logs and confirm your machine is ready before installing.',
+                cmd: 'Get-ChildItem \"$env:USERPROFILE\\.ai-workspace\\artifacts\"',
               },
               {
                 step: 4,
-                title: 'Run Full Setup',
-                desc: 'Let the bootstrap handle everything (30-60 minutes):',
+                title: 'Run Full Setup (Install)',
+                desc: 'Once preflight is clean, run the install phase (30-60 minutes):',
                 cmd: '.\\bootstrap.cmd -Mode Full',
               },
               {
@@ -332,7 +332,7 @@ export default function ScriptPanel() {
                 <h4 className="text-[14px] font-semibold text-[#10B981]">One-Liner (Advanced)</h4>
               </div>
               <code className="block p-3 rounded-lg bg-[#050A18] border border-[rgba(255,255,255,0.06)] text-[#67E8F9] text-[11px] font-mono break-all">
-                iwr https://flexnetos.github.io/ai-workspace-configurator/scripts/bootstrap.cmd -OutFile $env:TEMP\ai-workspace-bootstrap.cmd; & $env:TEMP\ai-workspace-bootstrap.cmd
+                iwr https://flexnetos.github.io/ai-workspace-configurator/scripts/bootstrap.cmd -OutFile $env:TEMP\ai-workspace-bootstrap.cmd; & $env:TEMP\ai-workspace-bootstrap.cmd -Mode CheckOnly
               </code>
               <p className="text-[11px] text-[#475569] mt-2">
                 Downloads and runs the bootstrap launcher. Only use from trusted sources.

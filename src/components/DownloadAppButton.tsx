@@ -23,7 +23,7 @@ const downloadOptions: DownloadOption[] = [
   {
     id: 'bootstrap',
     name: 'PowerShell Installer',
-    description: 'One-liner command. Auto-downloads, installs, and launches the app.',
+    description: 'One-liner command. Runs Preflight (CheckOnly) first, then you choose whether to install.',
     size: '25 KB',
     icon: <Terminal className="w-5 h-5" />,
     action: 'copy-command',
@@ -61,7 +61,7 @@ const downloadOptions: DownloadOption[] = [
 ];
 
 // The one-liner install command (will work once pushed to GitHub)
-const installCommand = "iwr https://flexnetos.github.io/ai-workspace-configurator/scripts/bootstrap.cmd -OutFile $env:TEMP\\ai-workspace-bootstrap.cmd; & $env:TEMP\\ai-workspace-bootstrap.cmd";
+const installCommand = "iwr https://flexnetos.github.io/ai-workspace-configurator/scripts/bootstrap.cmd -OutFile $env:TEMP\\ai-workspace-bootstrap.cmd; & $env:TEMP\\ai-workspace-bootstrap.cmd -Mode CheckOnly";
 
 export function DownloadAppModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
   const [downloaded, setDownloaded] = useState<string | null>(null);

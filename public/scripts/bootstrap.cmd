@@ -23,11 +23,17 @@ if %errorlevel% neq 0 (
 )
 
 rem Prefer pwsh if available, otherwise fall back to Windows PowerShell.
+set "DEFAULT_ARGS="
+if "%~1"=="" (
+  rem Safe default: run preflight only unless the user explicitly chooses Full/InstallOnly.
+  set "DEFAULT_ARGS=-Mode CheckOnly"
+)
+
 where pwsh >nul 2>&1
 if %errorlevel%==0 (
-  pwsh -NoProfile -ExecutionPolicy Bypass -File "%BOOTSTRAP_PS1%" %*
+  pwsh -NoProfile -ExecutionPolicy Bypass -File "%BOOTSTRAP_PS1%" %DEFAULT_ARGS% %*
 ) else (
-  powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%BOOTSTRAP_PS1%" %*
+  powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%BOOTSTRAP_PS1%" %DEFAULT_ARGS% %*
 )
 
 exit /b %errorlevel%

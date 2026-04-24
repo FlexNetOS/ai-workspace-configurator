@@ -39,6 +39,10 @@ Write-Host @"
 ╚══════════════════════════════════════════════════════════════════╝
 "@ -ForegroundColor Cyan
 
+if ($Mode -eq "CheckOnly") {
+    Write-Host "      PRE-FLIGHT MODE (CheckOnly): no installs will run" -ForegroundColor Yellow
+}
+
 # ─── Step 0: Environment Setup ───
 Write-Host "`n[0/5] Setting up workspace directories..." -ForegroundColor Cyan
 $dirs = @("$WorkspaceDir\logs", "$WorkspaceDir\artifacts", "$WorkspaceDir\scripts", "$env:USERPROFILE\WSL")

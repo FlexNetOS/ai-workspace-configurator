@@ -28,6 +28,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and ver
 - Hardened installer targets to build `nsis`, `portable`, and `zip` in a single consistent flow.
 - Simplified `release/package.json` to metadata-only with explicit private flag.
 - Updated download/install UI guidance to prefer `bootstrap.cmd` and avoid pipe-to-iex execution.
+- Made Preflight (`CheckOnly`) the default path in `bootstrap.cmd` and updated UI copy to identify Preflight-first as the recommended flow.
 
 ### Fixed
 - Fixed GitHub release build failure caused by fake integrity hashes in `release/package-lock.json` (`EINTEGRITY`).
